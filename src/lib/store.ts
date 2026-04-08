@@ -64,22 +64,9 @@ state.subscribe((s) => {
   }, 150);
 });
 
-// Apply theme when it changes
+// Dark-only — force it on the root element once.
 if (browser) {
-  state.subscribe((s) => {
-    const theme = s.settings.theme;
-    const dark =
-      theme === 'dark' ||
-      (theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
-    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  });
-  // Watch system preference changes
-  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-    const s = get(state);
-    if (s.settings.theme === 'system') {
-      document.documentElement.dataset.theme = e.matches ? 'dark' : 'light';
-    }
-  });
+  document.documentElement.dataset.theme = 'dark';
 }
 
 // ------------------------------------------------------------

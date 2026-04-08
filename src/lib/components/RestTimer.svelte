@@ -66,26 +66,28 @@
   .timer {
     position: fixed;
     right: 1rem;
-    bottom: calc(88px + var(--safe-b));
-    background: var(--surface);
-    border: 1px solid var(--accent);
-    padding: 0.75rem;
-    border-radius: var(--radius);
+    bottom: calc(100px + var(--safe-b));
+    background: rgba(28, 28, 30, 0.9);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--line);
+    padding: 0.85rem 0.95rem;
+    border-radius: var(--r-lg);
     display: flex;
-    gap: 0.75rem;
+    gap: 0.85rem;
     align-items: center;
     z-index: 70;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
-    animation: slide 240ms cubic-bezier(0.2, 0.8, 0.3, 1);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+    animation: slide 280ms cubic-bezier(0.2, 0.8, 0.3, 1);
   }
   @keyframes slide { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-  .ring { position: relative; width: 58px; height: 58px; }
+  .ring { position: relative; width: 60px; height: 60px; }
   .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-  .bg { fill: none; stroke: var(--line); stroke-width: 7; }
+  .bg { fill: none; stroke: var(--surface-2); stroke-width: 6; }
   .fg {
     fill: none;
     stroke: var(--accent);
-    stroke-width: 7;
+    stroke-width: 6;
     stroke-linecap: round;
     stroke-dasharray: 283;
     transition: stroke-dashoffset 900ms linear;
@@ -96,12 +98,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 15px;
+    font-weight: 600;
     letter-spacing: -0.02em;
+    color: var(--ink);
   }
-  .actions { display: flex; flex-direction: column; gap: 0.25rem; }
-  .actions .btn { padding: 0.35rem 0.65rem; min-height: 28px; font-size: 10px; }
+  .actions { display: flex; flex-direction: column; gap: 0.3rem; }
+  .actions .btn {
+    padding: 0.4rem 0.75rem;
+    min-height: 28px;
+    font-size: 11px;
+    font-weight: 500;
+  }
   .urgent .fg { stroke: var(--warn); }
   .urgent .label { color: var(--warn); }
 </style>

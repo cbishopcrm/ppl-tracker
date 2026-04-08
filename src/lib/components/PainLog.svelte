@@ -24,43 +24,48 @@
 
 <style>
   .pain {
-    border: 1px solid var(--line);
     background: var(--surface);
-    border-radius: var(--radius);
-    padding: 0.9rem 1rem;
-    margin-bottom: 0.8rem;
+    border-radius: var(--r-lg);
+    padding: 1.1rem 1.2rem;
+    margin-bottom: 0.85rem;
   }
   .label {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
     gap: 0.5rem;
-    margin-bottom: 0.55rem;
+    margin-bottom: 0.7rem;
+  }
+  .eyebrow {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.01em;
   }
   .hint {
-    font-size: 9px;
-    color: var(--ink-4);
-    letter-spacing: 0.04em;
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: -0.005em;
   }
   .scale {
     display: grid;
     grid-template-columns: repeat(11, 1fr);
-    gap: 3px;
+    gap: 4px;
   }
   .scale button {
-    padding: 0.4rem 0;
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 700;
-    border: 1px solid var(--line);
-    border-radius: 3px;
-    background: var(--bg-2);
+    padding: 0.5rem 0;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--r-pill);
+    background: var(--surface-2);
     color: var(--ink-3);
-    min-height: 34px;
-    transition: all 120ms;
+    min-height: 38px;
+    transition: all 180ms, transform 120ms;
+    font-variant-numeric: tabular-nums;
   }
-  .scale button:hover { background: var(--surface-2); color: var(--ink); }
-  .scale button.on.low { background: var(--ok); border-color: var(--ok); color: var(--bg); }
-  .scale button.on.mid { background: var(--pr); border-color: var(--pr); color: var(--bg); }
-  .scale button.on.high { background: var(--warn); border-color: var(--warn); color: var(--bg); }
+  .scale button:hover { background: var(--surface-3); color: var(--ink); }
+  .scale button:active { transform: scale(0.92); }
+  .scale button.on.low { background: var(--ok); color: #000; font-weight: 600; }
+  .scale button.on.mid { background: var(--pr); color: #000; font-weight: 600; }
+  .scale button.on.high { background: var(--warn); color: #fff; font-weight: 600; }
 </style>

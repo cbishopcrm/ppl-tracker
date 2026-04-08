@@ -1,10 +1,9 @@
 <!doctype html>
-<html lang="en" %sveltekit.theme%>
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <meta name="theme-color" content="#0c0a08" media="(prefers-color-scheme: dark)" />
-  <meta name="theme-color" content="#f5efe6" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#000000" />
   <meta name="description" content="Spine-safe Push/Pull/Legs workout tracker" />
   <link rel="icon" type="image/svg+xml" href="%sveltekit.assets%/icon.svg" />
   <link rel="apple-touch-icon" href="%sveltekit.assets%/icon.svg" />
@@ -12,17 +11,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
     rel="stylesheet"
   />
-  <script>
-    // Apply stored theme before paint to avoid flash
-    try {
-      const t = localStorage.getItem('ppl:theme') || 'system';
-      const dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
-      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-    } catch {}
-  </script>
   %sveltekit.head%
 </head>
 <body data-sveltekit-preload-data="hover">

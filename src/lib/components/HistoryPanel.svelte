@@ -33,7 +33,7 @@
 <Modal {open} title="History" on:close={() => (open = false)}>
   {#if sessions.length === 0}
     <div class="empty">
-      <p class="serif">No sessions yet.</p>
+      <p class="title">No sessions yet.</p>
       <p>Start your first session to begin tracking.</p>
     </div>
   {:else}
@@ -42,7 +42,7 @@
         <header>
           <div>
             <div class="eyebrow">{fmtDate(sess.startedAt)} · {sess.location} · Week {sess.week.toUpperCase()}</div>
-            <h3 class="serif">{sess.dayKey}</h3>
+            <h3 class="title">{sess.dayKey}</h3>
           </div>
           <div class="badges mono">
             <span><strong>{formatVolume(sess.totalVolume)}</strong><small>{unit}</small></span>
@@ -64,38 +64,45 @@
 <style>
   .empty {
     text-align: center;
-    padding: 2.5rem 1rem;
+    padding: 3rem 1rem;
     color: var(--ink-3);
   }
-  .empty p.serif {
-    font-family: var(--serif);
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--ink-2);
+  .empty p.title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--ink);
     margin-bottom: 0.5rem;
+    letter-spacing: -0.025em;
   }
   .item {
-    padding: 1rem 0;
-    border-bottom: 1px solid var(--line);
+    background: var(--bg-2);
+    border-radius: var(--r-lg);
+    padding: 1.15rem 1.3rem;
+    margin-bottom: 0.7rem;
   }
-  .item:last-child { border-bottom: 0; }
   .item header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 0.75rem;
-    margin-bottom: 0.4rem;
+    gap: 0.85rem;
+    margin-bottom: 0.65rem;
+  }
+  .eyebrow {
+    font-size: 12px;
+    color: var(--ink-3);
+    font-weight: 500;
+    letter-spacing: -0.005em;
   }
   .item h3 {
-    font-size: 20px;
-    font-weight: 900;
-    letter-spacing: -0.02em;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
     text-transform: capitalize;
-    margin-top: 0.15rem;
+    margin-top: 0.2rem;
   }
   .badges {
     display: flex;
-    gap: 0.85rem;
+    gap: 1rem;
     text-align: right;
   }
   .badges span {
@@ -104,24 +111,26 @@
     align-items: flex-end;
   }
   .badges strong {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--accent);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.015em;
   }
   .badges small {
-    font-size: 9px;
+    font-size: 10px;
     color: var(--ink-3);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    margin-top: 1px;
   }
   .exlist {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--ink-3);
     line-height: 1.5;
+    letter-spacing: -0.005em;
   }
   .pain {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--ink-3);
-    margin-top: 0.3rem;
+    margin-top: 0.5rem;
+    letter-spacing: -0.005em;
   }
 </style>

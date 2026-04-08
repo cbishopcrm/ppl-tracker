@@ -124,9 +124,9 @@
     </button>
   </header>
 
-  <h3 class="name serif">{exercise.name}</h3>
+  <h3 class="name">{exercise.name}</h3>
   {#if supersetEx}
-    <h3 class="name serif superset-name">+ {supersetEx.name}</h3>
+    <h3 class="name superset-name">+ {supersetEx.name}</h3>
   {/if}
 
   <div class="rx-row">
@@ -209,7 +209,7 @@
         <button class="alt" class:on={i === altIndex} on:click={() => pick(i)}>
           <span class="alt-letter">{String.fromCharCode(65 + i)}</span>
           <span class="alt-body">
-            <span class="alt-name serif">{altEx.name}</span>
+            <span class="alt-name">{altEx.name}</span>
             <span class="alt-rx mono">{alt.rx}</span>
           </span>
         </button>
@@ -220,190 +220,231 @@
 
 <style>
   .card {
-    border: 1px solid var(--line);
     background: var(--surface);
-    padding: 1.1rem 1.15rem 1.15rem;
-    margin-bottom: 0.8rem;
-    border-radius: var(--radius);
+    padding: 1.35rem 1.4rem;
+    margin-bottom: 0.85rem;
+    border-radius: var(--r-lg);
     position: relative;
-    transition: border-color 200ms, opacity 200ms;
+    border: 1px solid transparent;
+    transition: border-color 240ms, background 240ms, opacity 240ms;
   }
-  .card.active { border-color: var(--accent); }
-  .card.active::before {
-    content: '';
-    position: absolute;
-    left: -1px; top: -1px; bottom: -1px;
-    width: 3px;
-    background: var(--accent);
-    border-radius: 2px 0 0 2px;
+  .card.active {
+    border-color: var(--accent-line);
+    background: var(--surface);
+    box-shadow: 0 0 0 3px var(--accent-soft);
   }
-  .card.done { opacity: 0.5; }
+  .card.done { opacity: 0.45; }
 
   header {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
+    gap: 0.7rem;
+    margin-bottom: 0.6rem;
   }
   .num {
-    font-family: var(--serif);
-    font-weight: 900;
-    font-size: 26px;
+    font-weight: 600;
+    font-size: 13px;
     color: var(--ink-3);
-    letter-spacing: -0.04em;
+    letter-spacing: -0.01em;
     line-height: 1;
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.35rem;
+    padding: 0.32rem 0.62rem;
+    background: var(--surface-2);
+    border-radius: var(--r-pill);
   }
-  .num .bolt { color: var(--accent); font-size: 14px; }
-  .meta { flex: 1; min-width: 0; }
+  .num .bolt { color: var(--accent-2); font-size: 10px; }
+  .meta { flex: 1; min-width: 0; display: flex; gap: 0.3rem; flex-wrap: wrap; }
   .tags { display: flex; gap: 0.3rem; flex-wrap: wrap; }
   .swap {
     width: 36px;
     height: 36px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: transparent;
+    border-radius: var(--r-pill);
+    background: var(--surface-2);
     color: var(--ink-3);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 120ms;
+    transition: background 180ms, color 180ms, transform 120ms;
   }
-  .swap:hover, .swap.open { color: var(--accent); border-color: var(--accent-soft); background: var(--accent-soft); }
+  .swap:hover, .swap.open {
+    color: var(--ink);
+    background: var(--surface-3);
+  }
+  .swap:active { transform: scale(0.92); }
 
   .name {
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 700;
-    letter-spacing: -0.025em;
-    line-height: 1.15;
+    letter-spacing: -0.028em;
+    line-height: 1.12;
     color: var(--ink);
-    margin-top: 0.1rem;
   }
   .superset-name {
-    font-size: 16px;
+    font-size: 17px;
     color: var(--ink-2);
     font-weight: 500;
-    font-style: italic;
-    margin-top: 0.1rem;
+    margin-top: 0.2rem;
+    letter-spacing: -0.015em;
   }
 
   .rx-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
-    margin-top: 0.35rem;
+    gap: 0.75rem;
+    margin-top: 0.55rem;
   }
   .rx {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--accent);
-    letter-spacing: 0.02em;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-2);
+    letter-spacing: -0.005em;
   }
 
   .cues {
-    font-size: 12px;
+    font-size: 14px;
     color: var(--ink-2);
-    line-height: 1.55;
-    margin-top: 0.55rem;
+    line-height: 1.5;
+    margin-top: 0.65rem;
+    letter-spacing: -0.005em;
   }
 
   .spine-note {
     display: flex;
-    gap: 0.4rem;
+    gap: 0.5rem;
     align-items: flex-start;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--info);
     background: var(--info-soft);
-    border: 1px solid var(--info-soft);
-    padding: 0.45rem 0.6rem;
-    margin-top: 0.5rem;
-    border-radius: var(--radius);
+    padding: 0.6rem 0.8rem;
+    margin-top: 0.7rem;
+    border-radius: var(--r-sm);
     line-height: 1.5;
+    letter-spacing: -0.005em;
   }
   .spine-note svg { margin-top: 2px; flex-shrink: 0; }
 
   .gym-ref {
-    font-size: 10px;
-    color: var(--ink-3);
-    font-style: italic;
-    margin-top: 0.4rem;
-    letter-spacing: 0.02em;
+    font-size: 11px;
+    color: var(--ink-4);
+    margin-top: 0.5rem;
   }
 
   .suggest {
-    font-size: 11px;
+    font-size: 13px;
     color: var(--ink-2);
-    background: var(--bg-2);
-    border-left: 2px solid var(--ink-3);
-    padding: 0.4rem 0.55rem;
-    margin-top: 0.55rem;
+    background: var(--surface-2);
+    padding: 0.7rem 0.9rem;
+    margin-top: 0.7rem;
+    border-radius: var(--r-sm);
     font-weight: 500;
+    letter-spacing: -0.005em;
   }
-  .suggest strong { color: var(--ink); font-size: 12px; }
-  .suggest.up { border-left-color: var(--ok); color: var(--ok); }
+  .suggest strong {
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .suggest.up { color: var(--ok); background: var(--ok-soft); }
   .suggest.up strong { color: var(--ok); }
-  .suggest.down { border-left-color: var(--warn); color: var(--warn); }
+  .suggest.down { color: var(--warn); background: var(--warn-soft); }
   .suggest.down strong { color: var(--warn); }
 
-  .sets { margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed var(--line); }
-  .sets-label { margin-bottom: 0.25rem; margin-top: 0.25rem; }
+  .sets {
+    margin-top: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--line);
+  }
+  .sets-label {
+    margin-bottom: 0.35rem;
+    margin-top: 0.35rem;
+    font-size: 11px;
+    color: var(--ink-3);
+    font-weight: 600;
+  }
   .add-set {
     width: 100%;
-    margin-top: 0.35rem;
-    padding: 0.55rem;
-    border: 1px dashed var(--line-2);
-    border-radius: var(--radius);
-    color: var(--ink-3);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    background: transparent;
-    transition: all 140ms;
+    margin-top: 0.5rem;
+    padding: 0.7rem;
+    border-radius: var(--r-pill);
+    background: var(--surface-2);
+    color: var(--ink-2);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    transition: all 180ms;
   }
-  .add-set:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+  .add-set:hover {
+    color: var(--ink);
+    background: var(--surface-3);
+  }
 
   .last {
-    font-size: 10px;
+    font-size: 12px;
     color: var(--ink-3);
-    margin-top: 0.55rem;
-    letter-spacing: 0.02em;
+    margin-top: 0.7rem;
+    letter-spacing: -0.005em;
   }
 
   .alts {
-    margin-top: 0.75rem;
-    padding-top: 0.6rem;
-    border-top: 1px dashed var(--line);
+    margin-top: 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--line);
   }
-  .alts-label { margin-bottom: 0.45rem; }
+  .alts-label {
+    margin-bottom: 0.55rem;
+    font-size: 11px;
+    color: var(--ink-3);
+    font-weight: 600;
+  }
   .alt {
     display: flex;
     align-items: center;
-    gap: 0.7rem;
+    gap: 0.85rem;
     width: 100%;
-    padding: 0.7rem;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: var(--bg-2);
-    margin-bottom: 0.35rem;
+    padding: 0.85rem 1rem;
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+    margin-bottom: 0.4rem;
     text-align: left;
-    transition: all 130ms;
+    transition: all 180ms;
+    border: 1px solid transparent;
   }
-  .alt:hover { background: var(--surface-2); border-color: var(--line-2); }
-  .alt.on { border-color: var(--accent); background: var(--accent-soft); }
+  .alt:hover { background: var(--surface-3); }
+  .alt.on {
+    background: var(--accent-soft);
+    border-color: var(--accent-line);
+  }
   .alt-letter {
-    font-family: var(--serif);
-    font-size: 20px;
-    font-weight: 900;
+    font-size: 13px;
+    font-weight: 600;
     color: var(--ink-3);
-    width: 24px;
-    text-align: center;
+    width: 22px;
+    height: 22px;
+    background: var(--surface-3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
   }
-  .alt.on .alt-letter { color: var(--accent); }
+  .alt.on .alt-letter {
+    color: #fff;
+    background: var(--accent);
+  }
   .alt-body { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-  .alt-name { font-size: 15px; font-weight: 700; color: var(--ink); line-height: 1.2; }
-  .alt-rx { font-size: 11px; color: var(--accent); margin-top: 2px; }
+  .alt-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+  .alt-rx {
+    font-size: 12px;
+    color: var(--ink-3);
+    margin-top: 2px;
+  }
 </style>

@@ -41,92 +41,84 @@
 <style>
   .row {
     display: grid;
-    grid-template-columns: 20px 1fr 12px 1fr 38px 28px;
+    grid-template-columns: 22px 1fr 14px 1fr 42px 28px;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.35rem 0;
+    gap: 0.45rem;
+    padding: 0.3rem 0;
   }
   .idx {
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 12px;
+    font-weight: 600;
     color: var(--ink-3);
     text-align: center;
   }
   .warmup .idx { color: var(--ok); }
   .field {
     position: relative;
-    padding: 0.55rem 0.5rem;
-    background: var(--bg-2);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    min-height: 42px;
+    padding: 0.6rem 0.55rem;
+    background: var(--surface-2);
+    border-radius: var(--r-sm);
+    min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 140ms;
+    transition: background 160ms;
   }
-  .field:hover { border-color: var(--line-2); background: var(--surface-2); }
+  .field:hover { background: var(--surface-3); }
   .val {
-    font-family: var(--serif);
-    font-size: 18px;
-    font-weight: 700;
+    font-size: 17px;
+    font-weight: 600;
     color: var(--ink);
     letter-spacing: -0.02em;
   }
-  .row:not(.done) .val { color: var(--ink); }
   .ph {
     position: absolute;
-    right: 4px;
-    top: 2px;
-    font-size: 7px;
+    right: 5px;
+    top: 3px;
+    font-size: 8px;
     color: var(--ink-4);
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    font-weight: 500;
+    letter-spacing: 0.02em;
   }
   .times {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--ink-3);
+    font-size: 13px;
+    color: var(--ink-4);
     text-align: center;
+    font-weight: 500;
   }
   .check {
-    width: 38px;
-    height: 38px;
-    background: var(--bg-2);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    width: 42px;
+    height: 42px;
+    background: var(--surface-2);
+    border-radius: var(--r-pill);
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--ink);
-    transition: all 140ms;
+    transition: all 180ms, transform 120ms;
   }
-  .check:hover { background: var(--surface-2); border-color: var(--line-2); }
+  .check:hover { background: var(--surface-3); }
+  .check:active { transform: scale(0.92); }
   .empty { width: 14px; height: 14px; }
   .row.done .check {
     background: var(--accent);
-    border-color: var(--accent);
-    color: var(--bg);
+    color: #fff;
   }
-  .row.done .field {
-    background: var(--accent-soft);
-    border-color: var(--accent-soft);
-  }
-  .row.done .val { color: var(--accent); }
-  .row.pr .check { background: var(--pr); border-color: var(--pr); }
+  .row.done .field { background: var(--accent-soft); }
+  .row.done .val { color: var(--accent-2); }
+  .row.pr .check { background: var(--pr); color: #000; }
 
   .del {
     width: 28px;
-    height: 38px;
+    height: 42px;
     color: var(--ink-4);
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: color 160ms;
   }
   .del:hover { color: var(--warn); }
 
-  .warmup .val { font-size: 14px; }
-  .warmup .field { background: var(--ok-soft); border-color: var(--ok-soft); }
-  .warmup.row.done .field { background: var(--ok-soft); border-color: var(--ok); }
+  .warmup .val { font-size: 14px; color: var(--ink-2); }
+  .warmup .field { background: var(--ok-soft); }
 </style>

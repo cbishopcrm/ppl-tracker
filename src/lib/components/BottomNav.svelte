@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { DAY_ORDER } from '../data/program';
   import { getProgram } from '../data/program';
   import { state } from '../store';
 
@@ -10,16 +9,17 @@
 </script>
 
 <nav class="bnav">
-  {#each prog.days as day, i}
-    <button
-      class:on={i === dayIndex}
-      on:click={() => onSelect(i)}
-      aria-label={day.label}
-    >
-      <span class="num mono">0{i + 1}</span>
-      <span class="label serif">{day.label}</span>
-    </button>
-  {/each}
+  <div class="bnav-inner">
+    {#each prog.days as day, i}
+      <button
+        class:on={i === dayIndex}
+        on:click={() => onSelect(i)}
+        aria-label={day.label}
+      >
+        {day.label}
+      </button>
+    {/each}
+  </div>
 </nav>
 
 <style>
@@ -28,65 +28,48 @@
     left: 0;
     right: 0;
     bottom: 0;
-    padding: 0.5rem 0.5rem calc(0.5rem + var(--safe-b));
-    background: var(--surface);
-    border-top: 1px solid var(--line);
-    display: flex;
-    gap: 2px;
+    padding: 0.75rem 1rem calc(0.75rem + var(--safe-b));
     z-index: 50;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .bnav-inner {
+    display: flex;
+    gap: 4px;
+    padding: 5px;
+    background: rgba(28, 28, 30, 0.85);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    pointer-events: auto;
+    max-width: 100%;
   }
   .bnav button {
-    flex: 1;
-    min-height: 68px;
-    padding: 0.55rem 0.25rem;
-    border-radius: var(--radius);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.18rem;
-    color: var(--ink-3);
-    transition: color 120ms, background 120ms;
+    padding: 0.72rem 1.15rem;
+    min-height: 42px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-2);
+    border-radius: var(--r-pill);
+    letter-spacing: -0.01em;
+    transition: background 200ms, color 200ms, transform 140ms;
+    white-space: nowrap;
   }
-  .bnav button:hover { color: var(--ink-2); }
+  .bnav button:hover { color: var(--ink); }
   .bnav button.on {
-    color: var(--ink);
-    background: var(--bg-2);
-  }
-  .bnav button.on .label {
-    color: var(--accent);
-  }
-  .bnav button.on::before {
-    content: '';
-    position: absolute;
-    bottom: calc(0.5rem + var(--safe-b));
-    width: 24px;
-    height: 2px;
     background: var(--accent);
+    color: #fff;
+    font-weight: 600;
   }
-  .num {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    color: inherit;
-    opacity: 0.7;
-  }
-  .label {
-    font-size: 18px;
-    font-weight: 900;
-    letter-spacing: -0.02em;
-    line-height: 1;
-  }
-  @media (min-width: 680px) {
-    .bnav {
-      left: 50%;
-      right: auto;
-      transform: translateX(-50%);
-      width: 100%;
-      max-width: 640px;
-      border-radius: var(--radius) var(--radius) 0 0;
+  .bnav button:active:not(.on) { transform: scale(0.95); }
+
+  @media (max-width: 420px) {
+    .bnav button {
+      padding: 0.7rem 0.85rem;
+      font-size: 13px;
     }
   }
 </style>

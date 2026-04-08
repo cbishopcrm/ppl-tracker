@@ -3,6 +3,7 @@
   import { state, setSetting, exportJSON, importJSON, resetAll } from '../store';
   import { pushToast } from './toast';
   import Icon from './Icon.svelte';
+  // theme toggle removed — app is dark only
 
   export let open = false;
 
@@ -74,19 +75,6 @@
   </div>
 
   <div class="field">
-    <label>Theme</label>
-    <div class="seg">
-      <button class:on={s.theme === 'system'} on:click={() => setSetting('theme', 'system')}>System</button>
-      <button class:on={s.theme === 'light'} on:click={() => setSetting('theme', 'light')}>
-        <Icon name="sun" size={14} /> Light
-      </button>
-      <button class:on={s.theme === 'dark'} on:click={() => setSetting('theme', 'dark')}>
-        <Icon name="moon" size={14} /> Dark
-      </button>
-    </div>
-  </div>
-
-  <div class="field">
     <label>Units</label>
     <div class="seg">
       <button class:on={s.unit === 'lb'} on:click={() => setSetting('unit', 'lb')}>Pounds</button>
@@ -150,14 +138,19 @@
 </Modal>
 
 <style>
-  .io { display: flex; gap: 0.4rem; margin-bottom: 0.5rem; }
+  .io { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
   .io .btn { flex: 1; }
   .btn.danger {
     width: 100%;
     color: var(--warn);
-    border-color: var(--warn-soft);
     background: var(--warn-soft);
   }
-  .btn.danger:hover { background: var(--warn); color: var(--bg); border-color: var(--warn); }
-  .hint { font-size: 11px; color: var(--ink-3); margin-top: 0.45rem; line-height: 1.5; }
+  .btn.danger:hover { background: var(--warn); color: #fff; }
+  .hint {
+    font-size: 12px;
+    color: var(--ink-3);
+    margin-top: 0.55rem;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+  }
 </style>

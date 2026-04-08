@@ -14,7 +14,7 @@
   <div class="backdrop" role="presentation" on:click={close} on:keydown={onBgKey}>
     <div class="modal" role="dialog" aria-modal="true" aria-label={title} on:click|stopPropagation on:keydown|stopPropagation>
       <header>
-        <h2 class="serif">{title}</h2>
+        <h2>{title}</h2>
         <button class="icon-btn" on:click={close} aria-label="Close">
           <Icon name="close" />
         </button>
@@ -30,44 +30,42 @@
   .backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     z-index: 150;
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    animation: fade 180ms;
+    animation: fade 220ms;
   }
   @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
   .modal {
     width: 100%;
-    max-width: 640px;
+    max-width: 680px;
     max-height: 92vh;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-bottom: 0;
-    border-radius: 12px 12px 0 0;
+    background: var(--surface);
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
     display: flex;
     flex-direction: column;
-    animation: slideUp 260ms cubic-bezier(0.2, 0.8, 0.3, 1);
+    animation: slideUp 300ms cubic-bezier(0.2, 0.8, 0.3, 1);
+    box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.5);
   }
   @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
   header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem 1.1rem;
-    border-bottom: 1px solid var(--line);
+    padding: 1.25rem 1.4rem 1rem;
     flex-shrink: 0;
   }
   header h2 {
-    font-size: 24px;
-    font-weight: 900;
+    font-size: 26px;
+    font-weight: 700;
     letter-spacing: -0.03em;
   }
   .body {
-    padding: 1.1rem 1.1rem calc(1.3rem + var(--safe-b));
+    padding: 0.5rem 1.4rem calc(1.75rem + var(--safe-b));
     overflow-y: auto;
     flex: 1;
   }

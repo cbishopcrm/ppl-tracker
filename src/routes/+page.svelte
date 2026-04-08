@@ -110,15 +110,15 @@
 
   <!-- Day header -->
   <section class="day">
-    <div class="day-left">
-      <div class="eyebrow">{currentDay.weekday} · Day 0{dayIndex + 1}</div>
-      <h2 class="serif">{currentDay.label}</h2>
-      <div class="focus">
-        {$state.settings.location === 'hotel' ? 'Dumbbells + bands' : 'Full equipment'}
-        · {program.days[dayIndex].slots.length + ($state.settings.treadmillMin > 0 ? 1 : 0)} exercises
-      </div>
+    <div class="eyebrow">{currentDay.weekday} · Day 0{dayIndex + 1}</div>
+    <h2 class="day-title">
+      Time to <span class="grad">{currentDay.label.toLowerCase()}.</span>
+    </h2>
+    <div class="focus">
+      {$state.settings.location === 'hotel' ? 'Dumbbells and bands' : 'Full equipment'}
+      · {program.days[dayIndex].slots.length + ($state.settings.treadmillMin > 0 ? 1 : 0)} exercises
     </div>
-    <button class="session-btn btn {$activeSession ? 'end' : ''}" on:click={toggleSession}>
+    <button class="session-btn btn btn-primary" class:end={$activeSession} on:click={toggleSession}>
       {$activeSession ? 'End session' : 'Start session'}
     </button>
   </section>
@@ -171,56 +171,56 @@
 
 <style>
   .day {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 0.75rem;
-    margin-bottom: 1.1rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    padding: 0.5rem 0 1rem;
   }
-  .day-left { flex: 1; min-width: 0; }
-  .day h2 {
-    font-size: 42px;
-    font-weight: 900;
-    letter-spacing: -0.035em;
-    line-height: 1;
-    margin-top: 0.2rem;
-    text-transform: capitalize;
+  .day .eyebrow {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-3);
+    letter-spacing: -0.005em;
+    margin-bottom: 0.35rem;
+  }
+  .day-title {
+    font-size: 52px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 0.98;
+    margin-bottom: 0.85rem;
   }
   .focus {
-    font-size: 11px;
+    font-size: 15px;
     color: var(--ink-3);
-    margin-top: 0.35rem;
-    letter-spacing: 0.02em;
+    margin-bottom: 1.15rem;
+    letter-spacing: -0.01em;
+    font-weight: 500;
   }
   .session-btn {
-    padding: 0.75rem 1.1rem;
-    min-height: 46px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    background: var(--accent);
-    color: var(--bg);
-    border-color: var(--accent);
+    padding: 0.8rem 1.75rem;
+    min-height: 48px;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
   }
-  .session-btn:hover { background: var(--accent-2); border-color: var(--accent-2); }
   .session-btn.end {
     background: var(--warn-soft);
     color: var(--warn);
-    border-color: var(--warn-soft);
   }
-  .session-btn.end:hover {
-    background: var(--warn);
-    color: var(--bg);
+  .session-btn.end:hover { background: var(--warn); color: #fff; }
+
+  @media (max-width: 420px) {
+    .day-title { font-size: 44px; }
   }
+
   .footer {
     text-align: center;
-    font-size: 10px;
+    font-size: 12px;
     color: var(--ink-4);
-    padding: 2rem 0 1rem;
-    line-height: 1.8;
-    border-top: 1px solid var(--line);
-    margin-top: 2rem;
+    padding: 2.5rem 0 1rem;
+    line-height: 1.75;
+    margin-top: 2.5rem;
+    letter-spacing: -0.005em;
   }
   .footer a { color: var(--ink-3); }
 </style>

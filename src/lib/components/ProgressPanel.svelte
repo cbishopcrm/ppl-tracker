@@ -53,7 +53,7 @@
 <Modal {open} title="Progress" on:close={() => (open = false)}>
   {#if exerciseProgress.length === 0}
     <div class="empty">
-      <p class="serif">No data yet.</p>
+      <p class="title">No data yet.</p>
       <p>Log a few sessions and your estimated 1RM progress will show here.</p>
     </div>
   {:else}
@@ -61,7 +61,7 @@
     {#each exerciseProgress as row (row.id)}
       <article class="row">
         <div class="top">
-          <h3 class="serif">{row.name}</h3>
+          <h3 class="title">{row.name}</h3>
           <div class="e1rm mono">
             <strong>{row.e1rm}</strong>
             <small>{unit} est 1RM</small>
@@ -81,67 +81,67 @@
 <style>
   .empty {
     text-align: center;
-    padding: 2.5rem 1rem;
+    padding: 3rem 1rem;
     color: var(--ink-3);
   }
-  .empty p.serif {
-    font-family: var(--serif);
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--ink-2);
+  .empty p.title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--ink);
     margin-bottom: 0.5rem;
+    letter-spacing: -0.025em;
   }
   .intro {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--ink-3);
-    line-height: 1.5;
+    line-height: 1.55;
     margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--line);
+    letter-spacing: -0.005em;
   }
   .row {
-    padding: 0.85rem 0;
-    border-bottom: 1px solid var(--line);
+    background: var(--bg-2);
+    padding: 1.1rem 1.3rem;
+    margin-bottom: 0.7rem;
+    border-radius: var(--r-lg);
   }
-  .row:last-child { border: 0; }
   .top {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    gap: 0.5rem;
+    gap: 0.75rem;
   }
   .top h3 {
-    font-size: 16px;
-    font-weight: 700;
-    letter-spacing: -0.015em;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.018em;
   }
   .e1rm {
     text-align: right;
   }
   .e1rm strong {
-    font-size: 18px;
-    font-weight: 800;
-    color: var(--accent);
-    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.025em;
   }
   .e1rm small {
-    font-size: 9px;
+    font-size: 11px;
     color: var(--ink-3);
     display: block;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    letter-spacing: -0.005em;
   }
   .chart {
-    margin-top: 0.5rem;
+    margin-top: 0.75rem;
     width: 100%;
     overflow: hidden;
   }
   .deload-hint {
-    font-size: 10px;
+    font-size: 12px;
     color: var(--pr);
     background: var(--pr-soft);
-    padding: 0.35rem 0.55rem;
-    margin-top: 0.4rem;
-    border-radius: 2px;
+    padding: 0.55rem 0.75rem;
+    margin-top: 0.6rem;
+    border-radius: var(--r-sm);
+    letter-spacing: -0.005em;
   }
 </style>
