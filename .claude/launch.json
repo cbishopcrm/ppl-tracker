@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "ppl",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "3737"],
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
       "port": 3737
     }
   ]

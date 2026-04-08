@@ -1,17 +1,8 @@
-// PPL Tracker — Service Worker
-const CACHE = 'ppl-v1';
-const ASSETS = [
-  './',
-  './index.html',
-  './styles.css',
-  './data.js',
-  './app.js',
-  './manifest.json',
-  './icon.svg',
-];
+// PPL Tracker — Service worker (basic offline)
+const CACHE = 'ppl-v2';
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (e) => {
@@ -25,22 +16,30 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
-  // Network-first for HTML, cache-first for everything else
+  const url = new URL(req.url);
+  if (url.origin !== location.origin) return;
+  if (url.pathname.startsWith('/api/')) return;
+
+  // Network first for HTML (get fresh), cache fallback
   if (req.mode === 'navigate' || req.headers.get('accept')?.includes('text/html')) {
     e.respondWith(
       fetch(req).then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(req, copy));
         return res;
-      }).catch(() => caches.match(req).then((r) => r || caches.match('./index.html')))
+      }).catch(() => caches.match(req).then((r) => r || caches.match('/')))
     );
     return;
   }
+
+  // Cache first for assets
   e.respondWith(
     caches.match(req).then((cached) =>
       cached || fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy));
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy));
+        }
         return res;
       }).catch(() => cached)
     )

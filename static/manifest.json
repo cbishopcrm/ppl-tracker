@@ -2,13 +2,13 @@
   "name": "PPL Tracker",
   "short_name": "PPL",
   "description": "Spine-safe Push/Pull/Legs workout tracker",
-  "start_url": "./",
+  "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0a0e1a",
-  "theme_color": "#0a0e1a",
+  "background_color": "#0c0a08",
+  "theme_color": "#0c0a08",
   "categories": ["fitness", "health"],
   "icons": [
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }
