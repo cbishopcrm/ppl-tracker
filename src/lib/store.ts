@@ -36,7 +36,8 @@ const defaultState: AppState = {
   sessions: [],
   active: null,
   slotSelections: {},
-  bodyWeights: []
+  bodyWeights: [],
+  nextDayIndex: 0
 };
 
 function loadInitial(): AppState {
@@ -176,7 +177,9 @@ export function endSession(discard = false) {
       totalVolume: totalVolume(mySets),
       totalSets: mySets.filter((x) => !x.isWarmup && !x.isCardio).length
     };
-    return { ...s, active: null, sessions: [completed, ...s.sessions] };
+    // Advance to next day in the PPL sequence
+    const nextIdx = (s.nextDayIndex + 1) % 4;
+    return { ...s, active: null, sessions: [completed, ...s.sessions], nextDayIndex: nextIdx };
   });
   haptic([60, 40, 60, 40, 100]);
 }

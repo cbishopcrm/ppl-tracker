@@ -32,10 +32,9 @@
   let historyOpen = false;
   let progressOpen = false;
 
-  // Auto-select day based on weekday
+  // Auto-select next day in the PPL sequence (persisted across sessions)
   onMount(() => {
-    const d = new Date().getDay();
-    dayIndex = d === 1 ? 0 : d === 2 ? 1 : d === 4 ? 2 : d === 5 ? 3 : 0;
+    dayIndex = $state.nextDayIndex ?? 0;
   });
 
   // Editing a set with the numpad

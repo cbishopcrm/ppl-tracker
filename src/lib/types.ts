@@ -144,6 +144,9 @@ export interface UndoEntry {
 export interface AppState {
   settings: Settings;
   sets: SetLog[];                 // FLAT set log — the source of truth
+  /** Which day index to auto-select next (0=Pull,1=Push,2=Legs,3=Core).
+   *  Advances after each completed session. User can override by tapping nav. */
+  nextDayIndex: number;
   sessions: CompletedSession[];
   active: ActiveSession | null;
   /** persistent slot selection across all sessions */
