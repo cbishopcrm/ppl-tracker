@@ -4,8 +4,18 @@
 // ============================================================
 import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
-import type { AppState, Settings, SetLog, ActiveSession, CompletedSession, Location, WeekVariant } from './types';
-import { nanoid, epley1RM, bestE1RM, totalVolume, isPR as detectPR } from './calc';
+import type {
+  AppState,
+  Settings,
+  SetLog,
+  ActiveSession,
+  CompletedSession,
+  Location,
+  WeekVariant,
+  BodyWeightLog,
+  UndoEntry
+} from './types';
+import { nanoid, totalVolume, isPR as detectPR, bestE1RM } from './calc';
 
 const STORAGE_KEY = 'ppl:v2';
 
@@ -13,11 +23,11 @@ const defaultSettings: Settings = {
   location: 'gym',
   week: 'a',
   unit: 'lb',
-  theme: 'system',
   defaultRestSec: 90,
   autoProgression: true,
   warmupEnabled: true,
-  treadmillMin: 5
+  hapticsEnabled: true,
+  cardio: { enabled: true, type: 'treadmill', durationMin: 5 }
 };
 
 const defaultState: AppState = {
@@ -25,7 +35,8 @@ const defaultState: AppState = {
   sets: [],
   sessions: [],
   active: null,
-  slotSelections: {}
+  slotSelections: {},
+  bodyWeights: []
 };
 
 function loadInitial(): AppState {
@@ -34,10 +45,23 @@ function loadInitial(): AppState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return structuredClone(defaultState);
     const parsed = JSON.parse(raw);
+    // Migration: old shape stored treadmillMin at top of settings
+    const migratedSettings = { ...defaultSettings, ...(parsed.settings ?? {}) };
+    if (parsed.settings && 'treadmillMin' in parsed.settings) {
+      migratedSettings.cardio = {
+        enabled: parsed.settings.treadmillMin > 0,
+        type: 'treadmill',
+        durationMin: parsed.settings.treadmillMin || 5
+      };
+    }
+    if (!migratedSettings.cardio || typeof migratedSettings.cardio !== 'object') {
+      migratedSettings.cardio = { enabled: true, type: 'treadmill', durationMin: 5 };
+    }
     return {
       ...structuredClone(defaultState),
       ...parsed,
-      settings: { ...defaultSettings, ...(parsed.settings ?? {}) }
+      settings: migratedSettings,
+      bodyWeights: Array.isArray(parsed.bodyWeights) ? parsed.bodyWeights : []
     };
   } catch (e) {
     console.warn('PPL: failed to load state', e);
@@ -67,6 +91,17 @@ state.subscribe((s) => {
 // Dark-only — force it on the root element once.
 if (browser) {
   document.documentElement.dataset.theme = 'dark';
+}
+
+// ------------------------------------------------------------
+// Haptics helper
+// ------------------------------------------------------------
+export function haptic(pattern: number | number[] = 30) {
+  if (!browser) return;
+  if (!get(state).settings.hapticsEnabled) return;
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    try { navigator.vibrate(pattern); } catch {}
+  }
 }
 
 // ------------------------------------------------------------
@@ -108,17 +143,18 @@ export function startSession(dayKey: string) {
       location: s.settings.location,
       week: s.settings.week,
       exerciseSets: {},
-      slotSelections: {}
+      slotSelections: {},
+      skippedSlots: []
     };
     return { ...s, active: session };
   });
+  haptic(20);
 }
 
 export function endSession(discard = false) {
   state.update((s) => {
     if (!s.active) return s;
     if (discard) {
-      // Remove any logged sets tied to this session
       return {
         ...s,
         sets: s.sets.filter((x) => x.sessionId !== s.active!.id),
@@ -142,6 +178,7 @@ export function endSession(discard = false) {
     };
     return { ...s, active: null, sessions: [completed, ...s.sessions] };
   });
+  haptic([60, 40, 60, 40, 100]);
 }
 
 export function setPainBefore(v: number) {
@@ -154,10 +191,31 @@ export function setSessionNotes(v: string) {
   state.update((s) => (s.active ? { ...s, active: { ...s.active, notes: v } } : s));
 }
 
+export function skipSlot(slotIdx: number) {
+  state.update((s) => {
+    if (!s.active) return s;
+    const skipped = new Set(s.active.skippedSlots ?? []);
+    skipped.add(slotIdx);
+    return { ...s, active: { ...s.active, skippedSlots: Array.from(skipped) } };
+  });
+}
+
+export function unskipSlot(slotIdx: number) {
+  state.update((s) => {
+    if (!s.active) return s;
+    return {
+      ...s,
+      active: {
+        ...s.active,
+        skippedSlots: (s.active.skippedSlots ?? []).filter((i) => i !== slotIdx)
+      }
+    };
+  });
+}
+
 // ------------------------------------------------------------
 // Set logging
 // ------------------------------------------------------------
-/** Add a new blank set for an exercise in the current session. */
 export function addBlankSet(exerciseId: string, dayKey: string, opts: Partial<SetLog> = {}) {
   state.update((s) => {
     if (!s.active) return s;
@@ -188,21 +246,51 @@ export function updateSet(id: string, patch: Partial<SetLog>) {
   }));
 }
 
+/** Buffer of recently-deleted items for undo. */
+export const undoBuffer = writable<UndoEntry[]>([]);
+const UNDO_MS = 5000;
+
 export function removeSet(id: string) {
+  const cur = get(state).sets.find((s) => s.id === id);
+  if (!cur) return;
   state.update((s) => ({ ...s, sets: s.sets.filter((x) => x.id !== id) }));
+  // Push to undo buffer
+  const entry: UndoEntry = {
+    id: nanoid(),
+    expiresAt: Date.now() + UNDO_MS,
+    label: 'Set deleted',
+    type: 'set-delete',
+    payload: cur
+  };
+  undoBuffer.update((b) => [...b, entry]);
+  setTimeout(() => {
+    undoBuffer.update((b) => b.filter((e) => e.id !== entry.id));
+  }, UNDO_MS);
+}
+
+export function performUndo() {
+  const entries = get(undoBuffer);
+  if (entries.length === 0) return;
+  const last = entries[entries.length - 1];
+  if (last.type === 'set-delete') {
+    state.update((s) => ({ ...s, sets: [...s.sets, last.payload] }));
+  }
+  undoBuffer.update((b) => b.filter((e) => e.id !== last.id));
 }
 
 export function toggleSetDone(id: string) {
+  let didMarkPR = false;
   state.update((s) => {
     const set = s.sets.find((x) => x.id === id);
     if (!set) return s;
     const newDone = !set.done;
     let pr = false;
-    if (newDone && set.weight && set.reps && !set.isWarmup && !set.isCardio) {
+    if (newDone && set.weight && set.reps && !set.isWarmup && !set.isCardio && !set.isTime) {
       const priorSets = s.sets.filter(
         (x) => x.exerciseId === set.exerciseId && x.id !== id && x.done && !x.isWarmup
       );
       pr = detectPR({ ...set, done: true }, priorSets);
+      if (pr) didMarkPR = true;
     }
     return {
       ...s,
@@ -211,6 +299,28 @@ export function toggleSetDone(id: string) {
       )
     };
   });
+  if (didMarkPR) haptic([40, 30, 40, 30, 80]);
+  else haptic(25);
+}
+
+// ------------------------------------------------------------
+// Body weight
+// ------------------------------------------------------------
+export function logBodyWeight(weight: number) {
+  if (!weight || weight <= 0) return;
+  const entry: BodyWeightLog = {
+    id: nanoid(),
+    date: Date.now(),
+    weight
+  };
+  state.update((s) => ({
+    ...s,
+    bodyWeights: [entry, ...s.bodyWeights]
+  }));
+}
+
+export function removeBodyWeight(id: string) {
+  state.update((s) => ({ ...s, bodyWeights: s.bodyWeights.filter((b) => b.id !== id) }));
 }
 
 // ------------------------------------------------------------
@@ -224,9 +334,6 @@ export function getSetsForExercise(s: AppState, exerciseId: string, sessionId?: 
 
 /** Last completed sets for an exercise (from history). */
 export function lastCompletedSets(s: AppState, exerciseId: string): SetLog[] {
-  const sessionsByDate = [...new Set(s.sets.filter((x) => x.exerciseId === exerciseId && x.done && !x.isWarmup).map((x) => x.sessionId))];
-  if (sessionsByDate.length === 0) return [];
-  // Find the most recent session with this exercise (that isn't the active one)
   const activeId = s.active?.id;
   const eligible = s.sets
     .filter((x) => x.exerciseId === exerciseId && x.done && !x.isWarmup && x.sessionId !== activeId)
@@ -257,7 +364,8 @@ export function importJSON(raw: string): boolean {
     state.set({
       ...structuredClone(defaultState),
       ...parsed,
-      settings: { ...defaultSettings, ...parsed.settings }
+      settings: { ...defaultSettings, ...parsed.settings },
+      bodyWeights: Array.isArray(parsed.bodyWeights) ? parsed.bodyWeights : []
     });
     return true;
   } catch {
@@ -281,13 +389,10 @@ export const weekStats = derived(state, (s) => {
   let vol = 0;
   let sets = 0;
   for (const set of recent) {
-    if (set.isWarmup || set.isCardio) continue;
+    if (set.isWarmup || set.isCardio || set.isTime) continue;
     if (!set.weight || !set.reps) continue;
     vol += set.weight * set.reps;
     sets++;
   }
-  const sessionDates = s.sessions
-    .filter((x) => x.startedAt >= weekAgo)
-    .map((x) => x.startedAt);
-  return { volume: Math.round(vol), sets, sessionsThisWeek: sessionDates.length };
+  return { volume: Math.round(vol), sets };
 });

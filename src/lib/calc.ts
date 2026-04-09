@@ -154,7 +154,7 @@ export function isPR(currentSet: SetLog, priorSets: SetLog[]): boolean {
 }
 
 // ------------------------------------------------------------
-// Streak computation
+// Streak computation (calendar-day, used for daily challenges)
 // ------------------------------------------------------------
 export function computeStreak(sessionDates: number[]): number {
   if (sessionDates.length === 0) return 0;
@@ -173,18 +173,118 @@ export function computeStreak(sessionDates: number[]): number {
   return streak;
 }
 
+/**
+ * PPL-aware streak: counts CONSECUTIVE WEEKS with at least N completed sessions.
+ * For PPL the target is 4/week (Pull, Push, Legs, Core).
+ */
+export function computePPLStreak(sessionDates: number[], target = 4): number {
+  if (sessionDates.length === 0) return 0;
+  // Group sessions by ISO week (year-week key)
+  const buckets = new Map<string, number>();
+  for (const d of sessionDates) {
+    const key = isoWeekKey(new Date(d));
+    buckets.set(key, (buckets.get(key) ?? 0) + 1);
+  }
+  // Walk back from this week
+  let streak = 0;
+  let cur = new Date();
+  // Allow current week to count partial — only require past weeks to hit target
+  const thisKey = isoWeekKey(cur);
+  if ((buckets.get(thisKey) ?? 0) >= target) {
+    streak++;
+  }
+  // Walk back week-by-week
+  cur = new Date(cur.getTime() - 7 * 86400000);
+  while ((buckets.get(isoWeekKey(cur)) ?? 0) >= target) {
+    streak++;
+    cur = new Date(cur.getTime() - 7 * 86400000);
+  }
+  return streak;
+}
+
+function isoWeekKey(d: Date): string {
+  // Mon-based ISO week
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const weekNum = Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `${date.getUTCFullYear()}-${String(weekNum).padStart(2, '0')}`;
+}
+
+// ------------------------------------------------------------
+// Recovery: hours since last training of a given category
+// ------------------------------------------------------------
+export interface RecoveryStatus {
+  hoursSince: number | null;
+  fresh: boolean;     // > 36hr
+  ready: boolean;     // > 24hr
+  warm: boolean;      // < 24hr (still recovering)
+}
+
+export function recoveryFor(
+  sessionDates: { startedAt: number; dayKey: string }[],
+  dayKey: string,
+  now = Date.now()
+): RecoveryStatus {
+  const matches = sessionDates.filter((s) => s.dayKey === dayKey);
+  if (matches.length === 0) return { hoursSince: null, fresh: true, ready: true, warm: false };
+  const last = Math.max(...matches.map((s) => s.startedAt));
+  const hoursSince = (now - last) / (1000 * 60 * 60);
+  return {
+    hoursSince,
+    fresh: hoursSince >= 36,
+    ready: hoursSince >= 24,
+    warm: hoursSince < 24
+  };
+}
+
 // ------------------------------------------------------------
 // Total volume
 // ------------------------------------------------------------
 export function totalVolume(sets: SetLog[]): number {
   let v = 0;
   for (const s of sets) {
-    if (!s.done || s.isWarmup || s.isCardio) continue;
+    if (!s.done || s.isWarmup || s.isCardio || s.isTime) continue;
     if (!s.weight || !s.reps) continue;
     v += s.weight * s.reps;
   }
   return Math.round(v);
 }
+
+// ------------------------------------------------------------
+// Working sets per category (per week) — for volume targets
+// ------------------------------------------------------------
+export interface CategoryVolume {
+  push: number;
+  pull: number;
+  legs: number;
+  core: number;
+}
+
+export function setsPerCategoryThisWeek(
+  sets: SetLog[],
+  categoryFor: (exerciseId: string) => string | undefined,
+  now = Date.now()
+): CategoryVolume {
+  const weekAgo = now - 7 * 86400000;
+  const out: CategoryVolume = { push: 0, pull: 0, legs: 0, core: 0 };
+  for (const s of sets) {
+    if (!s.done || s.isWarmup || s.isCardio) continue;
+    if (s.date < weekAgo) continue;
+    const cat = categoryFor(s.exerciseId);
+    if (cat && cat in out) (out as Record<string, number>)[cat]++;
+  }
+  return out;
+}
+
+/** Suggested working set targets per week (Renaissance Periodization-ish minimums). */
+export const VOLUME_TARGETS: CategoryVolume = {
+  push: 12,
+  pull: 12,
+  legs: 12,
+  core: 8
+};
 
 // ------------------------------------------------------------
 // Format helpers

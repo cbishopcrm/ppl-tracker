@@ -27,9 +27,11 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
       category: 'pull',
       location: ['gym'],
       compound: true,
+      barbell: true,
       cues: '4 ramp sets then 1 working set. Stand inside bar. High handles reduce ROM.',
       spineSafe: 'Replaces conventional DL. 9.2% lower spinal flexion moment.',
-      defaultRestSec: 180
+      defaultRestSec: 180,
+      videoUrl: 'https://www.youtube.com/results?search_query=trap+bar+deadlift+form'
     }),
     ex({
       id: 'cable_pull_through',
@@ -64,9 +66,11 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
       category: 'pull',
       location: ['gym'],
       compound: true,
+      barbell: true,
       cues: 'PPT at lockout. Force perpendicular to spine.',
       spineSafe: 'PPT cue eliminates hyperextension.',
-      defaultRestSec: 120
+      defaultRestSec: 120,
+      videoUrl: 'https://www.youtube.com/results?search_query=barbell+hip+thrust+contreras'
     }),
     ex({
       id: 'banded_glute_bridge',
@@ -252,6 +256,7 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
       name: 'Barbell Curl',
       category: 'pull',
       location: ['gym'],
+      barbell: true,
       cues: '3-sec eccentrics. Elbows pinned.',
       defaultRestSec: 75
     }),
@@ -289,9 +294,11 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
       category: 'push',
       location: ['gym'],
       compound: true,
+      barbell: true,
       cues: 'Natural arch only. Squeeze glutes, feet flat.',
       spineSafe: 'Supine = no axial compression.',
-      defaultRestSec: 180
+      defaultRestSec: 180,
+      videoUrl: 'https://www.youtube.com/results?search_query=barbell+bench+press+form'
     }),
     ex({
       id: 'db_floor_press',
@@ -341,6 +348,7 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
       name: 'Close-Grip Bench Press',
       category: 'push',
       location: ['gym'],
+      barbell: true,
       cues: 'Hands shoulder-width. Heavy tri compound.',
       defaultRestSec: 120
     }),
@@ -460,7 +468,8 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
       compound: true,
       cues: 'Load bypasses spine. Push hard.',
       spineSafe: '45–52% lower erector activation, same quad.',
-      defaultRestSec: 180
+      defaultRestSec: 180,
+      videoUrl: 'https://www.youtube.com/results?search_query=belt+squat+form'
     }),
     ex({
       id: 'leg_press',
@@ -578,9 +587,11 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
       name: 'McGill Curl-Up',
       category: 'core',
       location: ['gym', 'hotel'],
+      unit: 'seconds',
       cues: 'One knee bent, hands under low back. 8–10s holds. 5→3→1 pyramid.',
       spineSafe: 'McGill Big 3 #1.',
-      defaultRestSec: 30
+      defaultRestSec: 30,
+      videoUrl: 'https://www.youtube.com/results?search_query=mcgill+curl+up'
     }),
     ex({
       id: 'dead_bug',
@@ -596,6 +607,7 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
       name: 'RKC Plank',
       category: 'core',
       location: ['gym', 'hotel'],
+      unit: 'seconds',
       cues: 'Max PPT, glute squeeze. 10–20s.',
       spineSafe: 'Greater EMG activation than long planks.',
       defaultRestSec: 30
@@ -605,9 +617,11 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
       name: 'Side Plank',
       category: 'core',
       location: ['gym', 'hotel'],
+      unit: 'seconds',
       cues: 'Elbow + knee, progress to feet. 5→3→1 pyramid.',
       spineSafe: 'McGill Big 3 #2. Targets QL.',
-      defaultRestSec: 30
+      defaultRestSec: 30,
+      videoUrl: 'https://www.youtube.com/results?search_query=mcgill+side+plank'
     }),
     ex({
       id: 'suitcase_carry',
@@ -641,9 +655,11 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
       name: 'Bird Dog',
       category: 'core',
       location: ['gym', 'hotel'],
+      unit: 'seconds',
       cues: 'Opposite arm/leg. Spine motionless. 5→3→1.',
       spineSafe: 'McGill Big 3 #3.',
-      defaultRestSec: 30
+      defaultRestSec: 30,
+      videoUrl: 'https://www.youtube.com/results?search_query=mcgill+bird+dog'
     }),
     ex({
       id: 'plank_shoulder_taps',
@@ -987,6 +1003,7 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
       name: 'Wall Sit + DB',
       category: 'legs',
       location: ['hotel'],
+      unit: 'seconds',
       cues: 'Back flat on wall. DB on lap. Pure quad iso.',
       gymRef: 'hack_squat',
       defaultRestSec: 90
@@ -1087,6 +1104,7 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
       name: 'Prone Bed Decompression',
       category: 'core',
       location: ['hotel'],
+      unit: 'seconds',
       cues: 'Face-down, arms off bed edge. Gentle traction. 3–5 min.',
       gymRef: 'face_pulls_hang',
       defaultRestSec: 0

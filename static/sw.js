@@ -1,7 +1,9 @@
-// PPL Tracker — Service worker (basic offline)
-const CACHE = 'ppl-v2';
+// PPL Tracker — Service worker
+// Network-first for HTML, cache-first for assets, version-busting on activate.
+const CACHE = 'ppl-v3-' + (self.registration?.scope ?? '');
 
 self.addEventListener('install', (e) => {
+  // Don't wait for old SW to finish — kick the new one in immediately
   self.skipWaiting();
 });
 
@@ -13,6 +15,11 @@ self.addEventListener('activate', (e) => {
   );
 });
 
+// Allow page to ask SW to activate immediately
+self.addEventListener('message', (e) => {
+  if (e.data === 'SKIP_WAITING') self.skipWaiting();
+});
+
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
@@ -20,7 +27,7 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== location.origin) return;
   if (url.pathname.startsWith('/api/')) return;
 
-  // Network first for HTML (get fresh), cache fallback
+  // Network first for HTML — always try to get fresh
   if (req.mode === 'navigate' || req.headers.get('accept')?.includes('text/html')) {
     e.respondWith(
       fetch(req).then((res) => {
@@ -32,7 +39,7 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Cache first for assets
+  // Cache first for hashed assets (Vite emits content-hashed filenames)
   e.respondWith(
     caches.match(req).then((cached) =>
       cached || fetch(req).then((res) => {

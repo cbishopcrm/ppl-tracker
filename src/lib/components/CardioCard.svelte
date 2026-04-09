@@ -1,18 +1,46 @@
 <script lang="ts">
-  import { state, addBlankSet, toggleSetDone, updateSet } from '../store';
+  import { state, addBlankSet, updateSet, haptic } from '../store';
   import Icon from './Icon.svelte';
   import { onDestroy } from 'svelte';
+  import type { CardioType } from '../types';
 
   export let dayKey: string;
 
-  $: targetMin = $state.settings.treadmillMin;
+  const ICONS: Record<CardioType, string> = {
+    treadmill: 'walk',
+    walk: 'walk',
+    bike: 'walk',
+    row: 'walk',
+    elliptical: 'walk',
+    jumprope: 'bolt'
+  };
+  const LABELS: Record<CardioType, string> = {
+    treadmill: 'Treadmill Walk',
+    walk: 'Walk',
+    bike: 'Bike',
+    row: 'Row',
+    elliptical: 'Elliptical',
+    jumprope: 'Jump Rope'
+  };
+  const CUES: Record<CardioType, string> = {
+    treadmill: 'Easy pace warmup. 2.5–3.5 mph, 1–3% incline. Loosen hips.',
+    walk: 'Easy pace warmup. Get blood flowing.',
+    bike: 'Light resistance. Spin to warm up legs and hips.',
+    row: 'Easy strokes, focus on form. Warmup heart rate.',
+    elliptical: 'Easy pace, full range of motion.',
+    jumprope: 'Light bouncing. Skip-step to warm up.'
+  };
+
+  $: cardioCfg = $state.settings.cardio;
+  $: targetMin = cardioCfg.durationMin;
+  $: type = cardioCfg.type;
   $: sessionId = $state.active?.id;
   $: cardioSet = sessionId
     ? $state.sets.find((x) => x.sessionId === sessionId && x.exerciseId === 'treadmill_walk')
     : undefined;
 
-  // Ensure one cardio set exists when session is active
-  $: if ($state.active && !cardioSet) {
+  // Ensure one cardio set exists when session is active and cardio is enabled
+  $: if ($state.active && cardioCfg.enabled && !cardioSet) {
     addBlankSet('treadmill_walk', dayKey, { isCardio: true, durationSec: 0 });
   }
 
@@ -20,6 +48,13 @@
   let startedAt = 0;
   let elapsed = 0;
   let tickId: ReturnType<typeof setInterval> | null = null;
+  let persistTickId: ReturnType<typeof setInterval> | null = null;
+  let alerted = false;
+
+  // Restore from persisted state
+  $: if (cardioSet && !running && elapsed === 0 && cardioSet.durationSec) {
+    elapsed = cardioSet.durationSec;
+  }
 
   function startWalk() {
     if (!cardioSet) return;
@@ -27,43 +62,60 @@
     startedAt = Date.now() - elapsed * 1000;
     tickId = setInterval(() => {
       elapsed = Math.round((Date.now() - startedAt) / 1000);
-      if (elapsed >= targetMin * 60 && navigator.vibrate) {
-        navigator.vibrate([200, 80, 200]);
+      if (elapsed >= targetMin * 60 && !alerted) {
+        alerted = true;
+        haptic([200, 80, 200]);
       }
     }, 500);
+    // Persist every 3s so reload doesn't lose progress
+    persistTickId = setInterval(() => {
+      if (cardioSet) updateSet(cardioSet.id, { durationSec: elapsed });
+    }, 3000);
   }
 
   function pauseWalk() {
     running = false;
     if (tickId) { clearInterval(tickId); tickId = null; }
+    if (persistTickId) { clearInterval(persistTickId); persistTickId = null; }
+    if (cardioSet) updateSet(cardioSet.id, { durationSec: elapsed });
   }
 
   function finishWalk() {
     if (!cardioSet) return;
     pauseWalk();
     updateSet(cardioSet.id, { durationSec: elapsed, done: true });
+    haptic(40);
   }
 
-  onDestroy(() => { if (tickId) clearInterval(tickId); });
+  function redo() {
+    if (!cardioSet) return;
+    pauseWalk();
+    elapsed = 0;
+    alerted = false;
+    updateSet(cardioSet.id, { durationSec: 0, done: false });
+  }
 
-  $: if (cardioSet?.done && !running) elapsed = cardioSet.durationSec ?? 0;
+  onDestroy(() => {
+    if (tickId) clearInterval(tickId);
+    if (persistTickId) clearInterval(persistTickId);
+  });
 
   $: mm = Math.floor(elapsed / 60);
   $: ss = String(elapsed % 60).padStart(2, '0');
   $: pct = Math.min(100, (elapsed / (targetMin * 60)) * 100);
 </script>
 
-{#if $state.active}
+{#if $state.active && cardioCfg.enabled}
 <article class="card" class:done={cardioSet?.done}>
   <header>
     <div class="num mono">00</div>
     <div class="tags">
-      <span class="tag tag-warmup"><Icon name="walk" size={10} />warmup</span>
+      <span class="tag tag-warmup"><Icon name={ICONS[type]} size={10} />warmup</span>
     </div>
   </header>
-  <h3 class="name">Treadmill Walk</h3>
-  <p class="rx mono">{targetMin}:00 easy pace</p>
-  <p class="cues">Get blood flowing. 2.5–3.5 mph, 1–3% incline if available. Loosen hips.</p>
+  <h3 class="name">{LABELS[type]}</h3>
+  <p class="rx mono">{targetMin}:00 · easy pace</p>
+  <p class="cues">{CUES[type]}</p>
 
   <div class="timer-block">
     <div class="elapsed mono">
@@ -73,7 +125,7 @@
     <div class="bar"><div class="fill" style="width: {pct}%"></div></div>
     <div class="actions">
       {#if cardioSet?.done}
-        <button class="btn btn-sm" on:click={() => { if (cardioSet) updateSet(cardioSet.id, { done: false }); pauseWalk(); elapsed = 0; }}>Redo</button>
+        <button class="btn btn-sm" on:click={redo}>Redo</button>
       {:else if running}
         <button class="btn btn-sm" on:click={pauseWalk}>Pause</button>
         <button class="btn btn-sm btn-primary" on:click={finishWalk}>Done</button>
@@ -82,7 +134,7 @@
         <button class="btn btn-sm btn-primary" on:click={finishWalk}>Done</button>
       {:else}
         <button class="btn btn-primary btn-sm" on:click={startWalk}>
-          <Icon name="play" size={12} /> Start walk
+          <Icon name="play" size={12} /> Start
         </button>
       {/if}
     </div>

@@ -8,6 +8,10 @@ import {
   detectDeload,
   isPR,
   computeStreak,
+  computePPLStreak,
+  recoveryFor,
+  setsPerCategoryThisWeek,
+  VOLUME_TARGETS,
   totalVolume,
   formatVolume,
   formatDuration
@@ -214,5 +218,98 @@ describe('detectDeload', () => {
     const sets: SetLog[] = [];
     const d = detectDeload(sets, 'bench');
     expect(d.suggest).toBe(false);
+  });
+});
+
+describe('computePPLStreak', () => {
+  const dayMs = 86400000;
+  it('returns 0 for empty', () => {
+    expect(computePPLStreak([])).toBe(0);
+  });
+  it('counts a week with 4+ sessions (same ISO week)', () => {
+    const now = Date.now();
+    // 4 sessions today (same ISO week guaranteed)
+    const dates = [now, now - 1000, now - 2000, now - 3000];
+    expect(computePPLStreak(dates)).toBeGreaterThanOrEqual(1);
+  });
+  it("doesn't count a week with fewer than target", () => {
+    const now = Date.now();
+    const dates = [now, now - dayMs];
+    expect(computePPLStreak(dates, 4)).toBe(0);
+  });
+});
+
+describe('recoveryFor', () => {
+  it('returns null/fresh for no history', () => {
+    const r = recoveryFor([], 'pull');
+    expect(r.hoursSince).toBeNull();
+    expect(r.fresh).toBe(true);
+  });
+  it('flags warm if recent', () => {
+    const r = recoveryFor(
+      [{ startedAt: Date.now() - 60 * 60 * 1000, dayKey: 'pull' }],
+      'pull'
+    );
+    expect(r.warm).toBe(true);
+    expect(r.fresh).toBe(false);
+  });
+  it('flags fresh if old', () => {
+    const r = recoveryFor(
+      [{ startedAt: Date.now() - 50 * 60 * 60 * 1000, dayKey: 'pull' }],
+      'pull'
+    );
+    expect(r.fresh).toBe(true);
+    expect(r.warm).toBe(false);
+  });
+});
+
+describe('setsPerCategoryThisWeek', () => {
+  const mk = (p: Partial<SetLog>): SetLog => ({
+    id: Math.random().toString(36),
+    sessionId: 's1',
+    exerciseId: 'ex1',
+    dayKey: 'pull',
+    date: Date.now(),
+    index: 0,
+    weight: 100,
+    reps: 5,
+    rpe: null,
+    done: true,
+    ...p
+  });
+  it('counts sets by category', () => {
+    const sets = [
+      mk({ exerciseId: 'bench' }),
+      mk({ exerciseId: 'bench' }),
+      mk({ exerciseId: 'row' }),
+      mk({ exerciseId: 'squat' })
+    ];
+    const cats: Record<string, string> = {
+      bench: 'push',
+      row: 'pull',
+      squat: 'legs'
+    };
+    const v = setsPerCategoryThisWeek(sets, (id) => cats[id]);
+    expect(v.push).toBe(2);
+    expect(v.pull).toBe(1);
+    expect(v.legs).toBe(1);
+  });
+  it('ignores warmup and cardio', () => {
+    const sets = [
+      mk({ exerciseId: 'bench', isWarmup: true }),
+      mk({ exerciseId: 'bench', isCardio: true }),
+      mk({ exerciseId: 'bench' })
+    ];
+    const v = setsPerCategoryThisWeek(sets, () => 'push');
+    expect(v.push).toBe(1);
+  });
+});
+
+describe('VOLUME_TARGETS', () => {
+  it('exports sane defaults', () => {
+    expect(VOLUME_TARGETS.push).toBeGreaterThan(0);
+    expect(VOLUME_TARGETS.pull).toBeGreaterThan(0);
+    expect(VOLUME_TARGETS.legs).toBeGreaterThan(0);
+    expect(VOLUME_TARGETS.core).toBeGreaterThan(0);
   });
 });

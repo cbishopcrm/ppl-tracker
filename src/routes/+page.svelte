@@ -1,7 +1,17 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { state, activeSession, startSession, endSession, getAltIndex, updateSet } from '$lib/store';
-  import { getProgram, DAY_ORDER } from '$lib/data/program';
+  import { onMount, tick } from 'svelte';
+  import {
+    state,
+    activeSession,
+    startSession,
+    endSession,
+    getAltIndex,
+    updateSet,
+    haptic
+  } from '$lib/store';
+  import { getProgram } from '$lib/data/program';
+  import { recoveryFor } from '$lib/calc';
+  import { EXERCISES } from '$lib/data/exercises';
   import { pushToast } from '$lib/components/toast';
 
   import Header from '$lib/components/Header.svelte';
@@ -15,6 +25,7 @@
   import SettingsPanel from '$lib/components/SettingsPanel.svelte';
   import HistoryPanel from '$lib/components/HistoryPanel.svelte';
   import ProgressPanel from '$lib/components/ProgressPanel.svelte';
+  import UndoToast from '$lib/components/UndoToast.svelte';
 
   let dayIndex = 0;
   let settingsOpen = false;
@@ -31,60 +42,73 @@
   let editingSetId: string | null = null;
   let editingWeight: number | null = null;
   let editingReps: number | null = null;
-  let editingMode: 'weight' | 'reps' = 'weight';
+  let editingRpe: number | null = null;
+  let editingMode: 'weight' | 'reps' | 'rpe' = 'weight';
+  let editingIsTime = false;
+  let editingIsBarbell = false;
+  let editingExName = '';
 
   $: program = getProgram($state.settings.location, $state.settings.week);
   $: currentDay = program.days[dayIndex];
 
+  $: dayRecovery = recoveryFor(
+    $state.sessions.map((s) => ({ startedAt: s.startedAt, dayKey: s.dayKey })),
+    currentDay.key
+  );
+
   let timer: RestTimer;
 
-  function openEdit(setId: string) {
+  async function openEdit(setId: string) {
     const set = $state.sets.find((s) => s.id === setId);
     if (!set) return;
+    const ex = EXERCISES[set.exerciseId];
     editingSetId = setId;
     editingWeight = set.weight;
     editingReps = set.reps;
-    editingMode = set.weight == null ? 'weight' : 'reps';
+    editingRpe = set.rpe;
+    editingIsTime = ex?.unit === 'seconds' || !!set.isTime;
+    editingIsBarbell = !!ex?.barbell;
+    editingExName = ex?.name ?? '';
+    editingMode = set.weight == null && !editingIsTime ? 'weight' : 'reps';
+    // Scroll the active row into view above the numpad after numpad mounts
+    await tick();
+    const el = document.querySelector(`[data-set-id="${setId}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  function onNumChange(e: CustomEvent<{ weight: number | null; reps: number | null }>) {
+  function onNumChange(e: CustomEvent<{ weight: number | null; reps: number | null; rpe: number | null }>) {
     if (!editingSetId) return;
     editingWeight = e.detail.weight;
     editingReps = e.detail.reps;
-    updateSet(editingSetId, { weight: e.detail.weight, reps: e.detail.reps });
+    editingRpe = e.detail.rpe;
+    updateSet(editingSetId, {
+      weight: e.detail.weight,
+      reps: e.detail.reps,
+      rpe: e.detail.rpe
+    });
   }
 
   function onNumCommit() {
     if (!editingSetId) return;
-    // Mark done if both values present
     const set = $state.sets.find((s) => s.id === editingSetId);
-    if (set && set.weight != null && set.reps != null && !set.done) {
+    if (set && (set.weight != null || editingIsTime) && set.reps != null && !set.done) {
       updateSet(editingSetId, { done: true });
-      // Find if PR
-      const priorSets = $state.sets.filter(
-        (x) => x.exerciseId === set.exerciseId && x.id !== set.id && x.done && !x.isWarmup
-      );
-      // Rest timer
-      startRest(set.exerciseId);
-      const isNewPR = priorSets.length > 0;
-      // (PR detection done in store.toggleSetDone)
+      startRest();
     }
     editingSetId = null;
   }
 
-  function onSetDone(setId: string, exerciseId: string) {
-    startRest(exerciseId);
-  }
-
-  function startRest(exerciseId: string) {
+  function startRest() {
     const rest = $state.settings.defaultRestSec;
-    // Could look up per-exercise default here
     timer?.start(rest);
   }
 
   function toggleSession() {
     if ($activeSession) {
-      if ($state.sets.filter((s) => s.sessionId === $activeSession!.id && s.done).length === 0) {
+      const completed = $state.sets.filter(
+        (s) => s.sessionId === $activeSession!.id && s.done
+      ).length;
+      if (completed === 0) {
         if (!confirm('Nothing logged. Discard session?')) return;
         endSession(true);
         pushToast('Discarded');
@@ -93,10 +117,24 @@
         pushToast('Session saved');
       }
     } else {
+      // Confirm if switching to a day mid-recovery
       startSession(currentDay.key);
       pushToast(`${currentDay.label} session started`);
     }
   }
+
+  function setDayIdx(i: number) {
+    dayIndex = i;
+  }
+
+  $: recoveryLabel = (() => {
+    if (dayRecovery.hoursSince == null) return null;
+    const h = Math.round(dayRecovery.hoursSince);
+    if (h < 24) return `${h}h ago — still recovering`;
+    if (h < 48) return `${h}h ago — ready`;
+    const d = Math.round(h / 24);
+    return `${d} day${d === 1 ? '' : 's'} ago — fresh`;
+  })();
 </script>
 
 <div class="app">
@@ -116,20 +154,25 @@
     </h2>
     <div class="focus">
       {$state.settings.location === 'hotel' ? 'Dumbbells and bands' : 'Full equipment'}
-      · {program.days[dayIndex].slots.length + ($state.settings.treadmillMin > 0 ? 1 : 0)} exercises
+      · {currentDay.slots.length + ($state.settings.cardio.enabled ? 1 : 0)} exercises
     </div>
-    <button class="session-btn btn btn-primary" class:end={$activeSession} on:click={toggleSession}>
-      {$activeSession ? 'End session' : 'Start session'}
-    </button>
+    {#if recoveryLabel}
+      <div class="recovery" class:warm={dayRecovery.warm} class:fresh={dayRecovery.fresh}>
+        Last {currentDay.label} · {recoveryLabel}
+      </div>
+    {/if}
+    {#if !$activeSession}
+      <button class="session-btn btn btn-primary" on:click={toggleSession}>
+        Start session
+      </button>
+    {/if}
   </section>
 
   {#if $activeSession}
     <PainLog phase="before" />
   {/if}
 
-  {#if $state.settings.treadmillMin > 0}
-    <CardioCard dayKey={currentDay.key} />
-  {/if}
+  <CardioCard dayKey={currentDay.key} />
 
   {#each currentDay.slots as slot, slotIdx (slotIdx)}
     <ExerciseCard
@@ -151,14 +194,26 @@
   </footer>
 </div>
 
-<BottomNav {dayIndex} onSelect={(i) => (dayIndex = i)} />
+<!-- Sticky end-session pill (live only) -->
+{#if $activeSession}
+  <button class="end-fab" on:click={toggleSession}>
+    End session
+  </button>
+{/if}
+
+<BottomNav {dayIndex} onSelect={setDayIdx} />
 <RestTimer bind:this={timer} />
+<UndoToast />
 
 {#if editingSetId}
   <NumPad
     bind:weightValue={editingWeight}
     bind:repsValue={editingReps}
+    bind:rpeValue={editingRpe}
     bind:mode={editingMode}
+    isTime={editingIsTime}
+    isBarbell={editingIsBarbell}
+    exerciseName={editingExName}
     on:change={onNumChange}
     on:commit={onNumCommit}
     on:close={() => (editingSetId = null)}
@@ -192,26 +247,50 @@
   .focus {
     font-size: 15px;
     color: var(--ink-3);
-    margin-bottom: 1.15rem;
+    margin-bottom: 0.85rem;
     letter-spacing: -0.01em;
     font-weight: 500;
   }
+  .recovery {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-3);
+    background: var(--surface);
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--r-pill);
+    margin-bottom: 1rem;
+  }
+  .recovery.warm { color: var(--warn); background: var(--warn-soft); }
+  .recovery.fresh { color: var(--ok); background: var(--ok-soft); }
   .session-btn {
-    padding: 0.8rem 1.75rem;
-    min-height: 48px;
+    padding: 0.85rem 1.85rem;
+    min-height: 50px;
     font-size: 15px;
     font-weight: 500;
     letter-spacing: -0.01em;
   }
-  .session-btn.end {
-    background: var(--warn-soft);
-    color: var(--warn);
-  }
-  .session-btn.end:hover { background: var(--warn); color: #fff; }
 
   @media (max-width: 420px) {
     .day-title { font-size: 44px; }
   }
+
+  .end-fab {
+    position: fixed;
+    bottom: calc(108px + var(--safe-b));
+    right: 1rem;
+    padding: 0.7rem 1.25rem;
+    background: var(--warn);
+    color: #fff;
+    border-radius: var(--r-pill);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    box-shadow: 0 12px 32px rgba(255, 69, 58, 0.35);
+    z-index: 65;
+    transition: transform 140ms;
+  }
+  .end-fab:active { transform: scale(0.95); }
 
   .footer {
     text-align: center;

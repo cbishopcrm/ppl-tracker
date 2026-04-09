@@ -5,7 +5,10 @@
 export type Location = 'gym' | 'hotel';
 export type WeekVariant = 'a' | 'b';
 export type Unit = 'lb' | 'kg';
-export type Theme = 'system' | 'light' | 'dark';
+export type LogUnit = 'reps' | 'seconds';
+export type MuscleGroup = 'push' | 'pull' | 'legs' | 'core';
+
+export type CardioType = 'treadmill' | 'bike' | 'row' | 'jumprope' | 'elliptical' | 'walk';
 
 /** An exercise definition in the library. ID is stable forever. */
 export interface Exercise {
@@ -18,6 +21,9 @@ export interface Exercise {
   gymRef?: string;                // for hotel variants that mirror a gym exercise
   compound?: boolean;             // true = warmup ramp gets generated
   defaultRestSec?: number;        // per-exercise rest override
+  barbell?: boolean;              // true = uses a loadable barbell (plate math applies)
+  unit?: LogUnit;                 // 'reps' (default) or 'seconds' (planks, holds)
+  videoUrl?: string;              // form-check video (e.g. AthleanX YouTube)
 }
 
 /** A prescription — how this exercise is programmed today. */
@@ -64,13 +70,14 @@ export interface SetLog {
   date: number;                   // epoch ms
   index: number;                  // set index within the exercise that session
   weight: number | null;
-  reps: number | null;
+  reps: number | null;            // also used as "seconds" if exercise.unit === 'seconds'
   rpe: number | null;             // 6-10, optional
   done: boolean;
   isPR?: boolean;
   isWarmup?: boolean;
   isCardio?: boolean;             // treadmill etc
-  durationSec?: number;           // for cardio
+  durationSec?: number;           // for cardio (live elapsed time, persisted)
+  isTime?: boolean;               // true when reps field is actually seconds
 }
 
 /** An in-progress session (nothing persisted until ended). */
@@ -84,8 +91,10 @@ export interface ActiveSession {
   exerciseSets: Record<string, SetLog[]>;
   /** selected alternative per slot */
   slotSelections: Record<number, number>;
-  painBefore?: number;            // 1-10 low-back feel at start
-  painAfter?: number;              // 1-10 at end
+  /** slot indexes the user dismissed */
+  skippedSlots?: number[];
+  painBefore?: number;            // 0-10 low-back feel at start
+  painAfter?: number;              // 0-10 at end
   notes?: string;
 }
 
@@ -97,16 +106,39 @@ export interface CompletedSession extends ActiveSession {
   totalSets: number;
 }
 
+/** A single body weight reading. */
+export interface BodyWeightLog {
+  id: string;
+  date: number;
+  weight: number;
+}
+
+/** Configuration for the warmup cardio block. */
+export interface CardioConfig {
+  enabled: boolean;
+  type: CardioType;
+  durationMin: number;
+}
+
 export interface Settings {
   location: Location;
   week: WeekVariant;
   unit: Unit;
-  theme: Theme;
   defaultRestSec: number;
   autoProgression: boolean;       // suggest next weight
   warmupEnabled: boolean;         // auto-generate warmup ramp
-  treadmillMin: number;           // pre-session walk duration
+  cardio: CardioConfig;
+  hapticsEnabled: boolean;
   syncCode?: string;              // cloud sync pairing code
+}
+
+/** A pending undo entry (e.g. a deleted set buffered for restore). */
+export interface UndoEntry {
+  id: string;
+  expiresAt: number;
+  label: string;
+  type: 'set-delete';
+  payload: SetLog;
 }
 
 export interface AppState {
@@ -116,4 +148,5 @@ export interface AppState {
   active: ActiveSession | null;
   /** persistent slot selection across all sessions */
   slotSelections: Record<string, number>;  // key = `${loc}_${week}_${dayKey}_${slotIdx}`
+  bodyWeights: BodyWeightLog[];
 }

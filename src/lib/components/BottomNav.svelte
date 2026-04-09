@@ -6,6 +6,17 @@
   export let onSelect: (i: number) => void;
 
   $: prog = getProgram($state.settings.location, $state.settings.week);
+
+  function tryPick(i: number) {
+    const active = $state.active;
+    if (active && prog.days[i].key !== active.dayKey) {
+      const ok = confirm(
+        `You're in the middle of a ${active.dayKey} session. Switch to view ${prog.days[i].label} anyway?\n\n(Your active session will continue in the background.)`
+      );
+      if (!ok) return;
+    }
+    onSelect(i);
+  }
 </script>
 
 <nav class="bnav">
@@ -13,7 +24,8 @@
     {#each prog.days as day, i}
       <button
         class:on={i === dayIndex}
-        on:click={() => onSelect(i)}
+        class:active-elsewhere={!!$state.active && day.key === $state.active.dayKey && i !== dayIndex}
+        on:click={() => tryPick(i)}
         aria-label={day.label}
       >
         {day.label}
@@ -57,6 +69,7 @@
     letter-spacing: -0.01em;
     transition: background 200ms, color 200ms, transform 140ms;
     white-space: nowrap;
+    position: relative;
   }
   .bnav button:hover { color: var(--ink); }
   .bnav button.on {
@@ -65,6 +78,16 @@
     font-weight: 600;
   }
   .bnav button:active:not(.on) { transform: scale(0.95); }
+
+  .bnav button.active-elsewhere::after {
+    content: '';
+    position: absolute;
+    top: 6px; right: 8px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px rgba(20, 124, 229, 0.2);
+  }
 
   @media (max-width: 420px) {
     .bnav button {

@@ -1,12 +1,22 @@
 <script lang="ts">
-  import type { Slot, AppState, SetLog } from '../types';
+  import type { Slot } from '../types';
   import { EXERCISES } from '../data/exercises';
-  import { state, addBlankSet, updateSet, removeSet, toggleSetDone, selectAlt, lastCompletedSets, bestE1RMForExercise } from '../store';
-  import { warmupRamp, suggestNextWeight, epley1RM, bestE1RM } from '../calc';
+  import {
+    state,
+    addBlankSet,
+    removeSet,
+    toggleSetDone,
+    selectAlt,
+    lastCompletedSets,
+    skipSlot,
+    unskipSlot,
+    updateSet
+  } from '../store';
+  import { warmupRamp, suggestNextWeight, bestE1RM, recoveryFor } from '../calc';
   import Icon from './Icon.svelte';
   import SetRow from './SetRow.svelte';
   import Sparkline from './Sparkline.svelte';
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount, tick } from 'svelte';
 
   export let slot: Slot;
   export let slotIndex: number;
@@ -15,7 +25,6 @@
 
   const dispatch = createEventDispatcher<{
     edit: { setId: string };
-    setDone: { setId: string };
   }>();
 
   let showAlts = false;
@@ -25,8 +34,13 @@
   $: supersetEx = rx.superset ? EXERCISES[rx.superset] : null;
   $: isActive = !!$state.active;
   $: sessionId = $state.active?.id;
+  $: isTimeBased = exercise.unit === 'seconds';
+  $: skipped = ($state.active?.skippedSlots ?? []).includes(slotIndex);
+  $: isCompound = !!exercise.compound;
+  $: warmupEnabled = $state.settings.warmupEnabled;
+  $: showWarmupBtn = isCompound && warmupSets.length === 0 && warmupEnabled;
 
-  // Sets logged in current session
+  // Sets logged in current session for this exercise
   $: mySets = sessionId
     ? $state.sets
         .filter((x) => x.sessionId === sessionId && x.exerciseId === rx.exerciseId && !x.isWarmup)
@@ -40,11 +54,19 @@
     : [];
 
   $: lastTime = lastCompletedSets($state, rx.exerciseId);
-  $: suggestion = $state.settings.autoProgression ? suggestNextWeight(lastTime, rx, $state.settings.unit) : null;
+  $: suggestion = $state.settings.autoProgression
+    ? suggestNextWeight(lastTime, rx, $state.settings.unit)
+    : null;
 
-  // 1RM sparkline: one e1RM per prior session
+  // Recovery hint per category
+  $: recovery = recoveryFor(
+    $state.sessions.map((s) => ({ startedAt: s.startedAt, dayKey: s.dayKey })),
+    dayKey
+  );
+
+  // 1RM sparkline
   $: sparklineData = (() => {
-    const bySessionId = new Map<string, SetLog[]>();
+    const bySessionId = new Map<string, typeof $state.sets>();
     for (const s of $state.sets) {
       if (s.exerciseId !== rx.exerciseId || !s.done || s.isWarmup) continue;
       if (!bySessionId.has(s.sessionId)) bySessionId.set(s.sessionId, []);
@@ -58,36 +80,66 @@
     return points.slice(-12);
   })();
 
-  $: targetWorkingSets = rx.sets;
+  // Initialize on mount when session active and no sets yet
+  let initialized = false;
+  onMount(() => {
+    if (isActive && sessionId && mySets.length === 0 && !skipped) {
+      initializeSets();
+      initialized = true;
+    }
+  });
 
-  // Initialize working sets if session active and none yet
-  $: if (isActive && sessionId && mySets.length === 0 && warmupSets.length === 0) {
-    initializeSets();
+  // Re-init if session changes (started after mount)
+  let lastSessionId: string | undefined = undefined;
+  $: if (sessionId !== lastSessionId) {
+    lastSessionId = sessionId;
+    if (isActive && sessionId && mySets.length === 0 && !skipped) {
+      // Defer to next tick to avoid clobbering Svelte init
+      tick().then(() => {
+        if ($state.active?.id === sessionId && mySets.length === 0 && !skipped) {
+          initializeSets();
+        }
+      });
+    }
   }
 
   function initializeSets() {
-    // Warmup ramp if compound + first compound today + setting enabled
-    if ($state.settings.warmupEnabled && exercise.compound && suggestion) {
-      const ramp = warmupRamp(suggestion.weight, $state.settings.unit);
-      for (let i = 0; i < ramp.length; i++) {
-        addBlankSet(rx.exerciseId, dayKey, {
-          weight: ramp[i].weight,
-          reps: ramp[i].reps,
-          isWarmup: true
-        });
-      }
-    }
-    // Working sets
-    for (let i = 0; i < targetWorkingSets; i++) {
+    // Working sets only — warmup is now an explicit "Generate ramp" button
+    for (let i = 0; i < rx.sets; i++) {
       addBlankSet(rx.exerciseId, dayKey, {
-        weight: suggestion?.weight ?? null,
-        reps: null
+        weight: !isTimeBased ? (suggestion?.weight ?? null) : null,
+        reps: null,
+        isTime: isTimeBased
+      });
+    }
+  }
+
+  function generateWarmup() {
+    if (!exercise.compound) return;
+    // Use the first working set's weight, the suggestion, or prompt
+    let target = mySets[0]?.weight ?? suggestion?.weight ?? null;
+    if (!target) {
+      const entered = prompt(
+        `What's your working weight today for ${exercise.name}? (${$state.settings.unit})`
+      );
+      if (!entered) return;
+      target = Number(entered);
+      if (!target || target <= 0) return;
+      // Backfill the empty working set
+      if (mySets[0]) updateSet(mySets[0].id, { weight: target });
+    }
+    const ramp = warmupRamp(target, $state.settings.unit);
+    for (const r of ramp) {
+      addBlankSet(rx.exerciseId, dayKey, {
+        weight: r.weight,
+        reps: r.reps,
+        isWarmup: true
       });
     }
   }
 
   function addExtra() {
-    addBlankSet(rx.exerciseId, dayKey, {});
+    addBlankSet(rx.exerciseId, dayKey, { isTime: isTimeBased });
   }
 
   function pick(idx: number) {
@@ -95,12 +147,20 @@
     showAlts = false;
   }
 
+  function toggleSkip() {
+    if (skipped) unskipSlot(slotIndex);
+    else skipSlot(slotIndex);
+  }
+
+  function onTimeStop(setId: string, seconds: number) {
+    updateSet(setId, { reps: seconds, done: seconds > 0, isTime: true });
+  }
+
   $: allDone = mySets.length > 0 && mySets.every((s) => s.done);
   $: started = mySets.some((s) => s.done);
 </script>
 
-<article class="card" class:done={allDone} class:active={started && !allDone}>
-  <!-- Header row -->
+<article class="card" class:done={allDone || skipped} class:active={started && !allDone} class:skipped>
   <header>
     <div class="num mono">
       {#if exercise.compound}<span class="bolt">▲</span>{/if}
@@ -117,6 +177,12 @@
         {#if supersetEx}
           <span class="tag tag-superset">superset</span>
         {/if}
+        {#if exercise.barbell}
+          <span class="tag">bar</span>
+        {/if}
+        {#if isTimeBased}
+          <span class="tag">timed</span>
+        {/if}
       </div>
     </div>
     <button class="swap" class:open={showAlts} on:click={() => (showAlts = !showAlts)} aria-label="Alternatives">
@@ -132,7 +198,7 @@
   <div class="rx-row">
     <div class="rx mono">{rx.rx}</div>
     {#if sparklineData.length >= 2}
-      <Sparkline data={sparklineData} stroke="var(--accent)" />
+      <Sparkline data={sparklineData} stroke="var(--accent-2)" />
     {/if}
   </div>
 
@@ -151,7 +217,13 @@
     <div class="gym-ref">← gym: {EXERCISES[exercise.gymRef].name}</div>
   {/if}
 
-  {#if suggestion && isActive}
+  {#if exercise.videoUrl}
+    <a class="video-link" href={exercise.videoUrl} target="_blank" rel="noopener">
+      ▶ Form check
+    </a>
+  {/if}
+
+  {#if suggestion && isActive && !skipped && !isTimeBased}
     <div class="suggest" class:up={suggestion.reason === 'hit_all'} class:down={suggestion.reason === 'missed_all'}>
       {#if suggestion.reason === 'hit_all'}
         ▲ Try <strong class="mono">{suggestion.weight}</strong> — you hit every rep last session
@@ -163,10 +235,15 @@
     </div>
   {/if}
 
-  {#if isActive && (warmupSets.length > 0 || mySets.length > 0)}
+  {#if skipped}
+    <div class="skip-banner">
+      Skipped today.
+      <button class="skip-undo" on:click={toggleSkip}>Restore</button>
+    </div>
+  {:else if isActive && (warmupSets.length > 0 || mySets.length > 0)}
     <div class="sets">
       {#if warmupSets.length > 0}
-        <div class="sets-label eyebrow">Warmup</div>
+        <div class="sets-label">Warmup</div>
         {#each warmupSets as set (set.id)}
           <SetRow
             {set}
@@ -179,19 +256,27 @@
         {/each}
       {/if}
       {#if mySets.length > 0}
-        {#if warmupSets.length > 0}<div class="sets-label eyebrow">Working</div>{/if}
-        {#each mySets as set (set.id)}
+        {#if warmupSets.length > 0}<div class="sets-label">Working</div>{/if}
+        {#each mySets as set, i (set.id)}
           <SetRow
             {set}
             unit={$state.settings.unit}
-            placeholder={lastTime[mySets.indexOf(set)]}
+            isTime={isTimeBased}
+            placeholder={lastTime[i]}
             on:toggle={() => toggleSetDone(set.id)}
             on:edit={() => dispatch('edit', { setId: set.id })}
             on:delete={() => removeSet(set.id)}
+            on:timeStop={(e) => onTimeStop(set.id, e.detail)}
           />
         {/each}
       {/if}
-      <button class="add-set" on:click={addExtra}>+ add set</button>
+      <div class="sets-actions">
+        <button class="add-set" on:click={addExtra}>+ add set</button>
+        {#if showWarmupBtn}
+          <button class="add-set warm" on:click={generateWarmup}>↗ warmup ramp</button>
+        {/if}
+        <button class="add-set skip" on:click={toggleSkip}>skip exercise</button>
+      </div>
     </div>
   {/if}
 
@@ -203,7 +288,7 @@
 
   {#if showAlts}
     <div class="alts">
-      <div class="alts-label eyebrow">Alternatives</div>
+      <div class="alts-label">Alternatives</div>
       {#each slot.alternatives as alt, i}
         {@const altEx = EXERCISES[alt.exerciseId]}
         <button class="alt" class:on={i === altIndex} on:click={() => pick(i)}>
@@ -230,10 +315,10 @@
   }
   .card.active {
     border-color: var(--accent-line);
-    background: var(--surface);
     box-shadow: 0 0 0 3px var(--accent-soft);
   }
   .card.done { opacity: 0.45; }
+  .card.skipped { opacity: 0.5; }
 
   header {
     display: flex;
@@ -255,7 +340,7 @@
     border-radius: var(--r-pill);
   }
   .num .bolt { color: var(--accent-2); font-size: 10px; }
-  .meta { flex: 1; min-width: 0; display: flex; gap: 0.3rem; flex-wrap: wrap; }
+  .meta { flex: 1; min-width: 0; }
   .tags { display: flex; gap: 0.3rem; flex-wrap: wrap; }
   .swap {
     width: 36px;
@@ -332,6 +417,21 @@
     margin-top: 0.5rem;
   }
 
+  .video-link {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 0.55rem;
+    padding: 0.35rem 0.75rem;
+    background: var(--surface-2);
+    border-radius: var(--r-pill);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent-2);
+    transition: background 180ms;
+    text-decoration: none;
+  }
+  .video-link:hover { background: var(--surface-3); text-decoration: none; }
+
   .suggest {
     font-size: 13px;
     color: var(--ink-2);
@@ -352,6 +452,23 @@
   .suggest.down { color: var(--warn); background: var(--warn-soft); }
   .suggest.down strong { color: var(--warn); }
 
+  .skip-banner {
+    font-size: 13px;
+    color: var(--ink-3);
+    background: var(--surface-2);
+    padding: 0.85rem 1rem;
+    margin-top: 0.85rem;
+    border-radius: var(--r-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .skip-undo {
+    color: var(--accent-2);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
   .sets {
     margin-top: 1rem;
     padding-top: 0.9rem;
@@ -364,14 +481,20 @@
     color: var(--ink-3);
     font-weight: 600;
   }
+  .sets-actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-top: 0.65rem;
+  }
   .add-set {
-    width: 100%;
-    margin-top: 0.5rem;
-    padding: 0.7rem;
+    flex: 1 1 auto;
+    min-width: 100px;
+    padding: 0.65rem 0.85rem;
     border-radius: var(--r-pill);
     background: var(--surface-2);
     color: var(--ink-2);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     letter-spacing: -0.005em;
     transition: all 180ms;
@@ -380,6 +503,8 @@
     color: var(--ink);
     background: var(--surface-3);
   }
+  .add-set.warm:hover { color: var(--ok); }
+  .add-set.skip:hover { color: var(--warn); }
 
   .last {
     font-size: 12px;

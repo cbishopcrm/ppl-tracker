@@ -1,11 +1,21 @@
 <script lang="ts">
   import Modal from './Modal.svelte';
-  import { state, setSetting, exportJSON, importJSON, resetAll } from '../store';
+  import {
+    state,
+    setSetting,
+    exportJSON,
+    importJSON,
+    resetAll,
+    logBodyWeight,
+    removeBodyWeight
+  } from '../store';
   import { pushToast } from './toast';
   import Icon from './Icon.svelte';
-  // theme toggle removed — app is dark only
+  import type { CardioType } from '../types';
 
   export let open = false;
+
+  let bwInput = '';
 
   async function doExport() {
     const json = exportJSON();
@@ -46,7 +56,26 @@
     else pushToast(data.message ?? 'Sync unavailable');
   }
 
+  function addBodyWeight() {
+    const n = Number(bwInput);
+    if (!n || n <= 0) return;
+    logBodyWeight(n);
+    bwInput = '';
+    pushToast('Body weight logged');
+  }
+
+  function setCardioType(t: CardioType) {
+    setSetting('cardio', { ...$state.settings.cardio, type: t });
+  }
+  function setCardioMin(m: number) {
+    setSetting('cardio', { ...$state.settings.cardio, durationMin: m, enabled: m > 0 });
+  }
+  function toggleCardioEnabled() {
+    setSetting('cardio', { ...$state.settings.cardio, enabled: !$state.settings.cardio.enabled });
+  }
+
   $: s = $state.settings;
+  $: latestBw = $state.bodyWeights[0];
 </script>
 
 <Modal {open} title="Settings" on:close={() => (open = false)}>
@@ -90,16 +119,22 @@
       <button class:on={s.defaultRestSec === 120} on:click={() => setSetting('defaultRestSec', 120)}>2m</button>
       <button class:on={s.defaultRestSec === 180} on:click={() => setSetting('defaultRestSec', 180)}>3m</button>
     </div>
-    <p class="hint">Individual exercises may override this.</p>
+    <p class="hint">Individual exercises override this.</p>
   </div>
 
   <div class="field">
-    <label>Treadmill warmup</label>
+    <label>Cardio warmup</label>
     <div class="seg">
-      <button class:on={s.treadmillMin === 0} on:click={() => setSetting('treadmillMin', 0)}>Off</button>
-      <button class:on={s.treadmillMin === 3} on:click={() => setSetting('treadmillMin', 3)}>3m</button>
-      <button class:on={s.treadmillMin === 5} on:click={() => setSetting('treadmillMin', 5)}>5m</button>
-      <button class:on={s.treadmillMin === 10} on:click={() => setSetting('treadmillMin', 10)}>10m</button>
+      <button class:on={s.cardio.type === 'treadmill'} on:click={() => setCardioType('treadmill')}>Treadmill</button>
+      <button class:on={s.cardio.type === 'bike'} on:click={() => setCardioType('bike')}>Bike</button>
+      <button class:on={s.cardio.type === 'row'} on:click={() => setCardioType('row')}>Row</button>
+      <button class:on={s.cardio.type === 'jumprope'} on:click={() => setCardioType('jumprope')}>Rope</button>
+    </div>
+    <div class="seg" style="margin-top:6px">
+      <button class:on={!s.cardio.enabled} on:click={toggleCardioEnabled}>Off</button>
+      <button class:on={s.cardio.enabled && s.cardio.durationMin === 3} on:click={() => setCardioMin(3)}>3m</button>
+      <button class:on={s.cardio.enabled && s.cardio.durationMin === 5} on:click={() => setCardioMin(5)}>5m</button>
+      <button class:on={s.cardio.enabled && s.cardio.durationMin === 10} on:click={() => setCardioMin(10)}>10m</button>
     </div>
   </div>
 
@@ -112,12 +147,51 @@
   </div>
 
   <div class="field">
-    <label>Warmup ramp sets</label>
+    <label>Warmup ramp button</label>
     <div class="seg">
-      <button class:on={s.warmupEnabled} on:click={() => setSetting('warmupEnabled', true)}>Auto</button>
-      <button class:on={!s.warmupEnabled} on:click={() => setSetting('warmupEnabled', false)}>Off</button>
+      <button class:on={s.warmupEnabled} on:click={() => setSetting('warmupEnabled', true)}>Show</button>
+      <button class:on={!s.warmupEnabled} on:click={() => setSetting('warmupEnabled', false)}>Hide</button>
     </div>
-    <p class="hint">Auto-generates 4 ramp sets for compounds.</p>
+    <p class="hint">A "warmup ramp" button appears under compound lifts in a session. Tap it to auto-generate 4 ramp sets.</p>
+  </div>
+
+  <div class="field">
+    <label>Haptics</label>
+    <div class="seg">
+      <button class:on={s.hapticsEnabled} on:click={() => setSetting('hapticsEnabled', true)}>On</button>
+      <button class:on={!s.hapticsEnabled} on:click={() => setSetting('hapticsEnabled', false)}>Off</button>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Body weight</label>
+    {#if latestBw}
+      <div class="bw-current mono">
+        Latest: <strong>{latestBw.weight}</strong> {s.unit}
+        <span class="bw-date">— {new Date(latestBw.date).toLocaleDateString()}</span>
+      </div>
+    {/if}
+    <div class="bw-row">
+      <input
+        class="bw-input mono"
+        type="number"
+        inputmode="decimal"
+        placeholder="weight in {s.unit}"
+        bind:value={bwInput}
+      />
+      <button class="btn btn-primary btn-sm" on:click={addBodyWeight}>Log</button>
+    </div>
+    {#if $state.bodyWeights.length > 1}
+      <div class="bw-history">
+        {#each $state.bodyWeights.slice(0, 5) as b (b.id)}
+          <div class="bw-item mono">
+            <span>{b.weight} {s.unit}</span>
+            <span class="bw-date">{new Date(b.date).toLocaleDateString()}</span>
+            <button class="bw-del" on:click={() => removeBodyWeight(b.id)} aria-label="Delete">×</button>
+          </div>
+        {/each}
+      </div>
+    {/if}
   </div>
 
   <div class="field">
@@ -133,7 +207,7 @@
   <div class="field">
     <label>Cloud sync</label>
     <button class="btn" on:click={trySync}><Icon name="cloud" size={14} />Check cloud status</button>
-    <p class="hint">Cloud sync requires Vercel KV to be enabled on this deployment. Local data is your source of truth.</p>
+    <p class="hint">Cloud sync requires Vercel KV (Upstash Redis) to be enabled on this deployment. Local data is your source of truth.</p>
   </div>
 </Modal>
 
@@ -153,4 +227,53 @@
     line-height: 1.5;
     letter-spacing: -0.005em;
   }
+  .bw-current {
+    font-size: 13px;
+    color: var(--ink-2);
+    background: var(--surface-2);
+    padding: 0.7rem 0.95rem;
+    border-radius: var(--r-md);
+    margin-bottom: 0.55rem;
+  }
+  .bw-current strong {
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .bw-date {
+    color: var(--ink-3);
+    font-size: 11px;
+    margin-left: 4px;
+  }
+  .bw-row { display: flex; gap: 0.5rem; }
+  .bw-input {
+    flex: 1;
+    padding: 0.7rem 0.85rem;
+    background: var(--surface-2);
+    border-radius: var(--r-pill);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 500;
+    min-height: 44px;
+  }
+  .bw-input:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .bw-history { margin-top: 0.7rem; display: flex; flex-direction: column; gap: 0.3rem; }
+  .bw-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.5rem 0.7rem;
+    background: var(--surface-2);
+    border-radius: var(--r-sm);
+    font-size: 12px;
+    color: var(--ink-2);
+  }
+  .bw-del {
+    color: var(--ink-4);
+    font-size: 18px;
+    width: 24px;
+    height: 24px;
+  }
+  .bw-del:hover { color: var(--warn); }
 </style>
