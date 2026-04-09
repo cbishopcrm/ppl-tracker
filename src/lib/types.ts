@@ -124,6 +124,7 @@ export interface Settings {
   location: Location;
   week: WeekVariant;
   unit: Unit;
+  theme: string;                  // theme id from themes.ts (e.g. 'midnight', 'wow-dk')
   defaultRestSec: number;
   autoProgression: boolean;       // suggest next weight
   warmupEnabled: boolean;         // auto-generate warmup ramp

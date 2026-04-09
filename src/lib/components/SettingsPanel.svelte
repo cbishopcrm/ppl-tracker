@@ -11,6 +11,7 @@
   } from '../store';
   import { pushToast } from './toast';
   import Icon from './Icon.svelte';
+  import ThemePicker from './ThemePicker.svelte';
   import type { CardioType } from '../types';
 
   export let open = false;
@@ -101,6 +102,11 @@
         Week B<small>Variant 2</small>
       </button>
     </div>
+  </div>
+
+  <div class="field">
+    <label>Theme</label>
+    <ThemePicker />
   </div>
 
   <div class="field">

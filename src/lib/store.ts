@@ -16,6 +16,7 @@ import type {
   UndoEntry
 } from './types';
 import { nanoid, totalVolume, isPR as detectPR, bestE1RM } from './calc';
+import { applyTheme, DEFAULT_THEME } from './themes';
 
 const STORAGE_KEY = 'ppl:v2';
 
@@ -23,6 +24,7 @@ const defaultSettings: Settings = {
   location: 'gym',
   week: 'a',
   unit: 'lb',
+  theme: DEFAULT_THEME,
   defaultRestSec: 90,
   autoProgression: true,
   warmupEnabled: true,
@@ -89,9 +91,16 @@ state.subscribe((s) => {
   }, 150);
 });
 
-// Dark-only — force it on the root element once.
+// Apply theme on load and whenever settings change
 if (browser) {
-  document.documentElement.dataset.theme = 'dark';
+  let lastTheme = '';
+  state.subscribe((s) => {
+    const tid = s.settings.theme || DEFAULT_THEME;
+    if (tid !== lastTheme) {
+      lastTheme = tid;
+      applyTheme(tid);
+    }
+  });
 }
 
 // ------------------------------------------------------------
